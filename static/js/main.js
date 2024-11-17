@@ -27,8 +27,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Save review function
 async function saveReview() {
-    const container = document.querySelector('.container');
-    if (!container) return;
+    const reviewContent = document.querySelector('.review-content');
+    if (!reviewContent) return;
     
     try {
         const response = await fetch('/save-review', {
@@ -52,8 +52,8 @@ async function saveReview() {
 
 // Post comment function
 async function postComment() {
-    const container = document.querySelector('.container');
-    if (!container) return;
+    const reviewContent = document.querySelector('.review-content');
+    if (!reviewContent) return;
     
     try {
         const response = await fetch('/post-comment', {
@@ -103,9 +103,13 @@ function showAlert(message, type = 'info') {
     
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
-        if (alertDiv.parentNode === container) {
+        if (alertDiv && alertDiv.parentNode === container) {
             alertDiv.classList.remove('show');
-            setTimeout(() => alertDiv.remove(), 150);
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode === container) {
+                    alertDiv.remove();
+                }
+            }, 150);
         }
     }, 5000);
 }
