@@ -5,9 +5,7 @@ import json
 
 class ClaudeService:
     def __init__(self, api_key: str):
-        """Initialize Claude service with API key validation"""
         if not api_key:
-            # Use mock service if no API key is provided
             self.use_mock = True
             return
             
@@ -22,11 +20,9 @@ class ClaudeService:
                 }
             )
         except Exception as e:
-            # Fall back to mock service on initialization error
             self.use_mock = True
     
     def analyze_pr(self, context: Dict) -> Dict:
-        """Analyzes PR using Claude API with fallback to mock review"""
         if self.use_mock:
             return self.mock_review(context)
             
@@ -51,12 +47,10 @@ class ClaudeService:
             return self.mock_review(context)
     
     def mock_review(self, context: Dict) -> Dict:
-        """Generate a detailed mock review response with PR-specific context"""
         files_count = context['pr_data']['changed_files']
         additions = context['pr_data']['additions']
         deletions = context['pr_data']['deletions']
         
-        # Get file types for more specific feedback
         file_extensions = set()
         primary_language = "code"
         if 'files' in context:
@@ -67,46 +61,95 @@ class ClaudeService:
             if file_extensions:
                 primary_language = max(file_extensions, key=list(file_extensions).count)
 
-        mock_response = f"""[MOCK REVIEW - FOR TESTING PURPOSES]
+        mock_response = f"""
+<div class="review-section">
+    <h3>Summary of Changes</h3>
+    <div class="card mb-3">
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li><i class="bi bi-file-earmark-text"></i> Files Modified: {files_count} ({', '.join(file_extensions) if file_extensions else 'various types'})</li>
+                <li><i class="bi bi-plus-circle"></i> Lines Added: {additions}</li>
+                <li><i class="bi bi-dash-circle"></i> Lines Removed: {deletions}</li>
+                <li><i class="bi bi-code-square"></i> Primary Language: {primary_language}</li>
+            </ul>
+        </div>
+    </div>
+</div>
 
-Summary of Changes:
-- Files Modified: {files_count} ({', '.join(file_extensions) if file_extensions else 'various types'})
-- Lines Added: {additions}
-- Lines Removed: {deletions}
-- Primary Language: {primary_language}
+<div class="review-section">
+    <h3>Code Quality Analysis</h3>
+    <div class="card mb-3">
+        <div class="card-body">
+            <h4>Best Practices</h4>
+            <ul class="list-unstyled mb-3">
+                <li><i class="bi bi-check-circle text-success"></i> Code follows standard formatting conventions</li>
+                <li><i class="bi bi-exclamation-triangle text-warning"></i> Consider adding more documentation for complex logic</li>
+                <li><i class="bi bi-check-circle text-success"></i> Variable naming is consistent</li>
+                <li><i class="bi bi-exclamation-triangle text-warning"></i> File organization could be improved</li>
+            </ul>
+        </div>
+    </div>
+</div>
 
-Code Quality Analysis:
-1. Best Practices
-- ✓ Code follows standard formatting conventions
-- ⚠ Consider adding more documentation for complex logic
-- ✓ Variable naming is consistent
-- ⚠ File organization could be improved
+<div class="review-section">
+    <h3>Potential Issues</h3>
+    <div class="card mb-3">
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li><i class="bi bi-info-circle text-info"></i> No major issues identified</li>
+                <li><i class="bi bi-exclamation-circle text-warning"></i> Consider adding error handling for edge cases</li>
+                <li><i class="bi bi-exclamation-circle text-warning"></i> Unit tests could be expanded</li>
+                <li><i class="bi bi-exclamation-circle text-warning"></i> Review error handling patterns</li>
+            </ul>
+        </div>
+    </div>
+</div>
 
-2. Potential Issues
-- No major issues identified
-- Consider adding error handling for edge cases
-- Unit tests could be expanded
-- Review error handling patterns
+<div class="review-section">
+    <h3>Security Considerations</h3>
+    <div class="card mb-3">
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li><i class="bi bi-check-circle text-success"></i> No obvious security vulnerabilities</li>
+                <li><i class="bi bi-shield-exclamation text-warning"></i> Consider adding input validation where applicable</li>
+                <li><i class="bi bi-shield-exclamation text-warning"></i> Review authentication handling if present</li>
+                <li><i class="bi bi-shield-exclamation text-warning"></i> Verify data sanitization practices</li>
+            </ul>
+        </div>
+    </div>
+</div>
 
-3. Security Considerations
-- ✓ No obvious security vulnerabilities
-- Consider adding input validation where applicable
-- Review authentication handling if present
-- Verify data sanitization practices
+<div class="review-section">
+    <h3>Performance Implications</h3>
+    <div class="card mb-3">
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li><i class="bi bi-speedometer2"></i> Changes appear to have minimal performance impact</li>
+                <li><i class="bi bi-lightning-charge"></i> Consider caching for repeated operations</li>
+                <li><i class="bi bi-graph-up"></i> Monitor resource usage in production</li>
+                <li><i class="bi bi-database-check"></i> Review database query optimization</li>
+            </ul>
+        </div>
+    </div>
+</div>
 
-4. Performance Implications
-- Changes appear to have minimal performance impact
-- Consider caching for repeated operations
-- Monitor resource usage in production
-- Review database query optimization
+<div class="review-section">
+    <h3>Suggested Improvements</h3>
+    <div class="card mb-3">
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li><i class="bi bi-pencil"></i> Add more inline documentation</li>
+                <li><i class="bi bi-diagram-2"></i> Consider breaking down complex functions</li>
+                <li><i class="bi bi-exclamation-diamond"></i> Add comprehensive error handling</li>
+                <li><i class="bi bi-journal-text"></i> Implement logging for better debugging</li>
+            </ul>
+        </div>
+    </div>
+</div>
 
-5. Suggested Improvements
-- Add more inline documentation
-- Consider breaking down complex functions
-- Add comprehensive error handling
-- Implement logging for better debugging
-
-Note: This is a mock review generated for testing purposes."""
+<div class="alert alert-warning mt-3">
+    <i class="bi bi-info-circle"></i> Note: This is a mock review generated for testing purposes.
+</div>"""
 
         return {
             'summary': mock_response,
@@ -116,12 +159,11 @@ Note: This is a mock review generated for testing purposes."""
         }
     
     def _build_analysis_prompt(self, context: Dict) -> str:
-        """Builds a comprehensive analysis prompt for Claude"""
         pr_data = context['pr_data']
         files = context.get('files', [])
         comments = context.get('comments', [])
 
-        prompt = f"""Please review this pull request and provide detailed feedback:
+        prompt = f"""Please review this pull request and provide detailed feedback using HTML formatting with Bootstrap classes:
 
 PR Details:
 Title: {pr_data['title']}
@@ -138,38 +180,18 @@ Modified Files:
 Discussion Context:
 {self._format_comments(comments)}
 
-Please analyze:
-1. Code quality and best practices
-   - Code structure and organization
-   - Naming conventions
-   - Documentation completeness
+Please analyze and format your response with proper HTML structure using Bootstrap classes and icons:
+1. Code quality and best practices (use bi-check-circle for good practices, bi-exclamation-triangle for warnings)
+2. Potential issues or bugs (use bi-exclamation-circle for issues)
+3. Security considerations (use bi-shield-exclamation for security warnings)
+4. Performance implications (use bi-speedometer2 and related icons)
+5. Suggested improvements (use appropriate icons for each suggestion)
 
-2. Potential issues or bugs
-   - Logic errors
-   - Edge cases
-   - Error handling
-
-3. Security considerations
-   - Input validation
-   - Authentication/authorization
-   - Data protection
-
-4. Performance implications
-   - Resource usage
-   - Optimization opportunities
-   - Scalability concerns
-
-5. Suggested improvements
-   - Code organization
-   - Testing coverage
-   - Documentation
-
-Provide your review in a structured format with clear sections and specific examples where applicable."""
+Format each section using Bootstrap cards and proper semantic HTML."""
         
         return prompt
     
     def _format_files(self, files: list) -> str:
-        """Formats the files list with detailed changes"""
         if not files:
             return "No file information available"
             
@@ -181,7 +203,6 @@ Provide your review in a structured format with clear sections and specific exam
         ])
     
     def _format_comments(self, comments: list) -> str:
-        """Formats PR comments for context"""
         if not comments:
             return "No previous discussion found"
             
@@ -189,13 +210,12 @@ Provide your review in a structured format with clear sections and specific exam
             f"- {comment['user']}: {comment['body'][:200]}..."
             if len(comment['body']) > 200 else
             f"- {comment['user']}: {comment['body']}"
-            for comment in comments[:5]  # Limit to last 5 comments
+            for comment in comments[:5]
         ])
     
     def _parse_claude_response(self, response: str) -> Dict:
-        """Parses Claude's response with validation"""
-        if not response:
-            raise ValueError("Empty response from Claude")
+        if not response or not isinstance(response, str):
+            raise ValueError("Invalid response from Claude")
             
         return {
             'summary': response,
