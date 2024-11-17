@@ -14,7 +14,7 @@
                             Mock Review
                         </span>
                         {% endif %}
-                        <a href="{{ pr_url }}" target="_blank" class="btn btn-outline-info btn-sm">
+                        <a href="{{ pr_url }}" target="_blank" class="btn btn-outline-info">
                             <i class="bi bi-github me-1"></i>View on GitHub
                         </a>
                     </div>
@@ -41,10 +41,10 @@
                         {% endif %}
                     </small>
                     <div class="btn-group">
-                        <button type="button" class="btn btn-success btn-sm" onclick="saveReview()">
+                        <button type="button" class="btn btn-success" onclick="saveReview()">
                             <i class="bi bi-save me-1"></i>Save
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="postComment()">
+                        <button type="button" class="btn btn-primary" onclick="postComment()">
                             <i class="bi bi-chat-text me-1"></i>Comment
                         </button>
                     </div>
@@ -79,6 +79,16 @@
     }
     .review-section ul li i {
         margin-right: 0.5rem;
+    }
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .btn:active {
+        transform: translateY(1px);
     }
 </style>
 {% endblock %}

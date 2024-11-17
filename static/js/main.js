@@ -38,36 +38,12 @@ function initializeTooltips() {
     }
 }
 
-// Helper function to get main container
-function getMainContainer() {
-    const container = document.querySelector('.container');
-    if (!container) {
-        console.debug('Main container not found');
-        return null;
-    }
-    return container;
-}
-
-// Helper function to get review content
-function getReviewContent() {
-    const reviewContent = document.querySelector('.review-content');
-    if (!reviewContent) {
-        console.debug('Review content not found');
-        return null;
-    }
-    return reviewContent;
-}
-
 // Save review function
 async function saveReview() {
-    const container = getMainContainer();
-    const reviewContent = getReviewContent();
+    const saveBtn = document.querySelector('.btn-success');
+    if (!saveBtn) return;
     
-    if (!container || !reviewContent) {
-        console.debug('Required elements not found for saving review');
-        return;
-    }
-    
+    saveBtn.disabled = true;
     try {
         const response = await fetch('/save-review', {
             method: 'POST',
@@ -85,19 +61,17 @@ async function saveReview() {
         }
     } catch (error) {
         showAlert(error.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
     }
 }
 
 // Post comment function
 async function postComment() {
-    const container = getMainContainer();
-    const reviewContent = getReviewContent();
+    const commentBtn = document.querySelector('.btn-primary');
+    if (!commentBtn) return;
     
-    if (!container || !reviewContent) {
-        console.debug('Required elements not found for posting comment');
-        return;
-    }
-    
+    commentBtn.disabled = true;
     try {
         const response = await fetch('/post-comment', {
             method: 'POST',
@@ -110,8 +84,6 @@ async function postComment() {
         
         if (response.ok) {
             showAlert('Comment posted successfully!', 'success');
-            
-            // If comment URL is available, offer to open it
             if (data.comment_url) {
                 setTimeout(() => {
                     if (confirm('Would you like to view your comment on GitHub?')) {
@@ -124,17 +96,13 @@ async function postComment() {
         }
     } catch (error) {
         showAlert(error.message, 'error');
+    } finally {
+        commentBtn.disabled = false;
     }
 }
 
 // Helper function to show alerts
 function showAlert(message, type = 'info') {
-    const container = getMainContainer();
-    if (!container) {
-        console.debug('Cannot show alert: container not found');
-        return;
-    }
-    
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
     alertDiv.innerHTML = `
@@ -144,6 +112,12 @@ function showAlert(message, type = 'info') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
+    
+    const container = document.querySelector('.container');
+    if (!container) {
+        console.debug('Cannot show alert: container not found');
+        return;
+    }
     
     // Insert alert at the beginning of the container
     container.insertBefore(alertDiv, container.firstChild);
