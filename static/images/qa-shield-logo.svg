@@ -1,0 +1,17 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield background -->
+  <path d="M16 2L4 7v9c0 5.2 3.3 10.1 8 11.8L16 29l4-1.2c4.7-1.7 8-6.6 8-11.8V7L16 2z" 
+        fill="#0d6efd" />
+  
+  <!-- QA Text -->
+  <text x="16" y="17" 
+        font-family="Arial, sans-serif" 
+        font-size="10"
+        font-weight="bold"
+        fill="#f8f9fa"
+        text-anchor="middle">QA</text>
+  
+  <!-- Checkmark -->
+  <path d="M14 20l-3-3-1 1 4 4 8-8-1-1z" 
+        fill="#f8f9fa"/>
+</svg>
