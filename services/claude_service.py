@@ -26,9 +26,56 @@ class ClaudeService:
             raise ValueError(f"Claude API authentication failed: {str(e)}")
         except Exception as e:
             raise Exception(f"Failed to initialize Claude client: {str(e)}")
+
+    def mock_review(self, context: Dict) -> Dict:
+        """Generate a mock review response for testing or when API credits are insufficient"""
+        files_count = context['pr_data']['changed_files']
+        additions = context['pr_data']['additions']
+        deletions = context['pr_data']['deletions']
+        
+        mock_response = f"""[MOCK REVIEW - FOR TESTING PURPOSES]
+
+Summary of Changes:
+- Files Modified: {files_count}
+- Lines Added: {additions}
+- Lines Removed: {deletions}
+
+Code Quality Analysis:
+1. Best Practices
+- ✓ Code follows standard formatting conventions
+- ⚠ Consider adding more documentation for complex logic
+- ✓ Variable naming is consistent
+
+2. Potential Issues
+- No major issues identified
+- Consider adding error handling for edge cases
+- Unit tests could be expanded
+
+3. Security Considerations
+- ✓ No obvious security vulnerabilities
+- Consider adding input validation where applicable
+- Review authentication handling if present
+
+4. Performance Implications
+- Changes appear to have minimal performance impact
+- Consider caching for repeated operations
+- Monitor resource usage in production
+
+5. Suggested Improvements
+- Add more inline documentation
+- Consider breaking down complex functions
+- Add comprehensive error handling
+
+Note: This is a mock review generated due to API credit limitations. Please check back later for a full AI-powered review."""
+
+        return {
+            'summary': mock_response,
+            'structured': True,
+            'is_mock': True
+        }
     
     def analyze_pr(self, context: Dict) -> Dict:
-        """Analyzes PR using Claude API with improved error handling"""
+        """Analyzes PR using Claude API with improved error handling and mock fallback"""
         try:
             prompt = self._build_analysis_prompt(context)
             
@@ -39,14 +86,16 @@ class ClaudeService:
                     "role": "user",
                     "content": prompt
                 }],
-                temperature=0.7,  # Add temperature for consistent output
+                temperature=0.7,
                 system="You are a code review expert. Analyze pull requests thoroughly and provide constructive feedback."
             )
             
             return self._parse_claude_response(message.content)
             
         except anthropic.RateLimitError:
-            raise Exception("Rate limit exceeded. Please try again later.")
+            return self.mock_review(context)
+        except anthropic.InsufficientCreditsError:
+            return self.mock_review(context)
         except anthropic.AuthenticationError:
             raise Exception("Authentication failed. Please check your API key.")
         except anthropic.BadRequestError as e:
@@ -93,5 +142,6 @@ Provide your review in a structured format with clear sections."""
             
         return {
             'summary': response,
-            'structured': True
+            'structured': True,
+            'is_mock': False
         }

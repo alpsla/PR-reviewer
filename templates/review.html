@@ -6,7 +6,12 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h4>PR Review Results</h4>
-                <a href="{{ pr_url }}" target="_blank" class="btn btn-outline-info">View PR on GitHub</a>
+                <div>
+                    {% if review.is_mock %}
+                    <span class="badge bg-warning me-2">Mock Review</span>
+                    {% endif %}
+                    <a href="{{ pr_url }}" target="_blank" class="btn btn-outline-info">View PR on GitHub</a>
+                </div>
             </div>
             <div class="card-body">
                 <div class="review-content">
