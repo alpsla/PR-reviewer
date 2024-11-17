@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>Submit Pull Request for Review</h4>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('review') }}" method="POST" id="prForm">
+                    <div class="mb-3">
+                        <label for="pr_url" class="form-label">GitHub PR URL</label>
+                        <input type="url" class="form-control" id="pr_url" name="pr_url" 
+                               placeholder="https://github.com/owner/repo/pull/123" required>
+                        <div class="form-text">Enter the full URL of the GitHub pull request</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        Analyze PR
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

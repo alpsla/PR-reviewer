@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4>PR Review Results</h4>
+                <a href="{{ pr_url }}" target="_blank" class="btn btn-outline-info">View PR on GitHub</a>
+            </div>
+            <div class="card-body">
+                <div class="review-content">
+                    {{ review.summary | safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">Review Another PR</a>
+</div>
+{% endblock %}
