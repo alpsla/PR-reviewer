@@ -1,0 +1,15 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modern merge visualization -->
+  <g stroke="#f8f9fa" stroke-width="2" fill="none">
+    <!-- Abstract merge flow -->
+    <path d="M6 4c12 0 8 24 20 24" 
+          stroke-linecap="round"/>
+    <!-- Connection points -->
+    <circle cx="6" cy="4" r="2" fill="#0d6efd"/>
+    <circle cx="26" cy="28" r="2" fill="#0d6efd"/>
+    <!-- Merge indicator -->
+    <path d="M16 12l4 4-4 4" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+  </g>
+</svg>

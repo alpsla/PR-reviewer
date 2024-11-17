@@ -12,19 +12,63 @@
 <body class="bg-dark">
     <nav class="navbar navbar-expand-lg mb-4">
         <div class="container-fluid">
-            <!-- Brand with logo -->
+            <!-- Brand with responsive logos -->
             <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="{{ url_for('static', filename='images/qa-shield-logo.svg') }}" 
-                     alt="QA Shield Logo" 
-                     width="32" 
-                     height="32" 
-                     class="me-2 d-none d-sm-inline">
-                <img src="{{ url_for('static', filename='images/pr-review-logo.svg') }}" 
-                     alt="PR Review Logo" 
-                     width="32" 
-                     height="32" 
-                     class="me-2 d-sm-none">
-                <span class="fs-4 fw-bold text-light">PR Review Assistant</span>
+                <!-- Desktop Logos (hidden on mobile) -->
+                <div class="d-none d-sm-flex align-items-center">
+                    <img src="{{ url_for('static', filename='images/qa-shield-logo.svg') }}" 
+                         alt="QA Shield Logo"
+                         width="32" 
+                         height="32" 
+                         class="logo-standard me-2"
+                         aria-hidden="true">
+                    <img src="{{ url_for('static', filename='images/qa-shield-logo-alt.svg') }}" 
+                         alt="QA Shield Alternative Logo"
+                         width="32" 
+                         height="32" 
+                         class="logo-alt me-2 d-none"
+                         aria-hidden="true">
+                    <img src="{{ url_for('static', filename='images/qa-shield-logo-hex.svg') }}" 
+                         alt="QA Shield Hex Logo"
+                         width="32" 
+                         height="32" 
+                         class="logo-hex me-2 d-none"
+                         aria-hidden="true">
+                    <img src="{{ url_for('static', filename='images/qa-shield-logo-circuit.svg') }}" 
+                         alt="QA Shield Circuit Logo"
+                         width="32" 
+                         height="32" 
+                         class="logo-circuit me-2 d-none"
+                         aria-hidden="true">
+                </div>
+                
+                <!-- Mobile Logos -->
+                <div class="d-sm-none d-flex align-items-center">
+                    <img src="{{ url_for('static', filename='images/pr-review-logo.svg') }}" 
+                         alt="PR Review Logo"
+                         width="28" 
+                         height="28" 
+                         class="logo-mobile me-2"
+                         aria-hidden="true">
+                    <img src="{{ url_for('static', filename='images/pr-review-logo-alt.svg') }}" 
+                         alt="PR Review Alternative Logo"
+                         width="28" 
+                         height="28" 
+                         class="logo-mobile-alt me-2 d-none"
+                         aria-hidden="true">
+                    <img src="{{ url_for('static', filename='images/pr-review-logo-modern.svg') }}" 
+                         alt="PR Review Modern Logo"
+                         width="28" 
+                         height="28" 
+                         class="logo-mobile-modern me-2 d-none"
+                         aria-hidden="true">
+                </div>
+                
+                <!-- Brand Text with responsive sizing -->
+                <span class="brand-text fs-4 fw-bold text-light">
+                    <span class="d-none d-sm-inline">PR Review Assistant</span>
+                    <span class="d-sm-none">PR Review</span>
+                </span>
             </a>
         </div>
     </nav>
@@ -50,6 +94,34 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    {% block extra_js %}{% endblock %}
+    {% block extra_js %}
+    <script>
+        // Logo rotation functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const desktopLogos = ['.logo-standard', '.logo-alt', '.logo-hex', '.logo-circuit'];
+            const mobileLogos = ['.logo-mobile', '.logo-mobile-alt', '.logo-mobile-modern'];
+            let currentDesktopLogo = 0;
+            let currentMobileLogo = 0;
+
+            // Rotate desktop logos every 5 seconds
+            setInterval(() => {
+                desktopLogos.forEach(logo => 
+                    document.querySelector(logo)?.classList.add('d-none'));
+                document.querySelector(desktopLogos[currentDesktopLogo])
+                    ?.classList.remove('d-none');
+                currentDesktopLogo = (currentDesktopLogo + 1) % desktopLogos.length;
+            }, 5000);
+
+            // Rotate mobile logos every 4 seconds
+            setInterval(() => {
+                mobileLogos.forEach(logo => 
+                    document.querySelector(logo)?.classList.add('d-none'));
+                document.querySelector(mobileLogos[currentMobileLogo])
+                    ?.classList.remove('d-none');
+                currentMobileLogo = (currentMobileLogo + 1) % mobileLogos.length;
+            }, 4000);
+        });
+    </script>
+    {% endblock %}
 </body>
 </html>

@@ -1,0 +1,14 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Minimalist shield -->
+  <path d="M16 2L4 8v8c0 5.5 5.1 10.7 12 14 6.9-3.3 12-8.5 12-14V8L16 2z" 
+        fill="#0d6efd" />
+  
+  <!-- Modern QA text -->
+  <text x="16" y="19" 
+        font-family="'Segoe UI', system-ui, sans-serif" 
+        font-size="12"
+        font-weight="600"
+        fill="#f8f9fa"
+        text-anchor="middle"
+        style="letter-spacing: -0.5px">QA</text>
+</svg>
