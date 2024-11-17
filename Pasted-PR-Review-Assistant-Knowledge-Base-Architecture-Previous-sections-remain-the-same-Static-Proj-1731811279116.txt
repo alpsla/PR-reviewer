@@ -1,0 +1,128 @@
+PR Review Assistant - Knowledge Base Architecture
+[Previous sections remain the same...]
+Static Project Context Preparation Guide 1. Project Architecture Documentation Tools:
+- Dependency Cruiser
+- Purpose: Generate dependency graphs
+- Command: `depcruise --include-only "^src" --output-type dot src | dot -T svg > architecture.svg`
+- Best for: JavaScript/TypeScript projects - Output: Visual dependency maps
+- Madge
+- Purpose: Module dependency visualization
+- Command: `madge --image graph.svg src/`
+- Best for: JavaScript/Node.js applications
+- Output: Dependency trees and circular dependency detection
+Storage Format:
+- SVG diagrams
+- Markdown documentation
+- Component relationship maps 2. Component Relationships Tools:
+- React Developer Tools
+- Purpose: Component hierarchy extraction - Features: Component tree export
+- Best for: React applications
+- Output: JSON structure of components
+- Storybook
+- Purpose: Component documentation
+- Features: Interactive component catalog - Best for: UI component libraries
+- Output: Living documentation
+- Added benefit: Visual testing
+Storage Format:
+- Component trees (JSON)
+- Interface definitions
+- Props documentation
+3. Design Patterns & Standards Documentation Tools:
+- JSDoc/TSDoc
+
+- Purpose: Code documentation
+- Features: Automated docs generation - Command: `jsdoc src -r -d docs`
+- Output: HTML documentation
+- Compodoc (Angular)
+- Purpose: Comprehensive documentation - Features: Architecture diagrams
+- Command: `compodoc -p tsconfig.json` - Output: Full project documentation
+Storage Format:
+- Markdown files
+- Pattern catalogs
+- Style guides
+4. Testing Patterns Tools:
+- Jest Coverage Reports
+- Purpose: Test coverage visualization - Command: `jest --coverage`
+- Output: HTML coverage reports
+- Cypress Dashboard
+- Purpose: E2E test documentation
+- Features: Test recording and screenshots - Output: Visual test documentation
+Storage Format:
+- Test templates
+- Mock data examples
+- Testing guidelines
+5. Common Workflows Documentation Approaches: 1. Process Flow Diagrams
+Tools:
+- Draw.io
+- Mermaid - PlantUML
+2. Workflow Documentation Structure:
+- Step-by-step guides
+- Decision trees
+- Troubleshooting guides
+
+Storage Format:
+- SVG diagrams
+- Markdown guides
+- Decision matrices
+Data Collection Strategy 1. Initial Setup Phase
+1. Project Structure
+- Run dependency analysis tools
+- Generate baseline architecture diagrams - Document main components
+2. Component Documentation
+- Set up automated documentation - Create component catalog
+- Document interfaces
+3. Pattern Library
+- Document existing patterns
+- Create pattern templates
+- Establish naming conventions
+4. Testing Framework
+- Document test patterns
+- Create test templates
+- Set up coverage reporting
+2. Maintenance Strategy
+Regular Updates: 1. Automated
+- Dependency graphs
+- Coverage reports
+- Component documentation
+2. Manual
+- Pattern updates
+- Workflow changes - Best practices
+Frequency:
+- Automated: With each PR - Manual: Monthly review 3. Integration Process Tools Integration:
+1. CI/CD Pipeline
+
+- Documentation generation - Dependency analysis
+- Coverage reports
+2. Pre-commit Hooks
+- Documentation updates - Style checking
+- Pattern validation
+Storage Considerations 1. Version Control Structure:
+/docs
+/architecture - diagrams/ - patterns/
+- workflows/
+/components - hierarchy/ - interfaces/
+/testing
+- templates/ - patterns/
+2. Documentation Format
+Preferred Formats:
+- Markdown for text
+- SVG for diagrams
+- JSON for structured data - YAML for configurations 3. Access Patterns Organization:
+- By component - By feature
+- By pattern type
+Indexing:
+- Full-text search
+- Tag-based organization
+- Related content linking Maintenance Best Practices 1. Regular Updates Schedule:
+- Weekly automation runs
+- Monthly manual reviews
+- Quarterly deep-dive updates
+
+2. Quality Checks
+Validation:
+- Documentation completeness - Diagram accuracy
+- Pattern relevance
+3. Team Involvement Responsibilities:
+- Documentation owners
+- Review processes
+- Update procedures

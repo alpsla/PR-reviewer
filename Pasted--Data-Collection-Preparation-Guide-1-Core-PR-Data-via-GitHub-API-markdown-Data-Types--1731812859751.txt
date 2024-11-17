@@ -1,0 +1,212 @@
+# Data Collection & Preparation Guide
+
+## 1. Core PR Data (via GitHub API)
+```markdown
+Data Types:
+- PR diff content
+- Changed files
+- PR description
+- Commit messages
+- Comments/discussion
+
+Tools/APIs:
+- GitHub REST API v3
+  Endpoint: `GET /repos/{owner}/{repo}/pulls/{pull_number}`
+- GitHub GraphQL API v4
+- Octokit SDK (recommended wrapper)
+
+Sample API Call:
+```javascript
+const octokit = new Octokit({ auth: 'token' });
+const { data } = await octokit.rest.pulls.get({
+  owner,
+  repo,
+  pull_number
+});
+```
+
+## 2. Code Analysis Data
+
+### A. Dependencies Analysis
+```markdown
+Tools/APIs:
+- Dependency-cruiser API
+  - Extracts dependencies
+  - Creates module graphs
+  - Identifies relationships
+
+- Madge API
+  - Module dependencies
+  - Circular dependency detection
+  - Tree generation
+```
+
+### B. Code Structure
+```markdown
+Tools/APIs:
+- AST Parsers:
+  - Babel Parser (JavaScript)
+  - TypeScript Compiler API
+  - Python ast module
+
+- Code Analysis Tools:
+  - ESLint API (JavaScript)
+  - SonarQube API (multi-language)
+  - PMD API (Java)
+```
+
+## 3. Project Context
+
+### A. Repository Structure
+```markdown
+Tools/APIs:
+- GitHub Trees API
+  Endpoint: `GET /repos/{owner}/{repo}/git/trees/{sha}`
+- Git API wrappers:
+  - Simple Git
+  - nodegit
+```
+
+### B. Documentation
+```markdown
+Tools/APIs:
+- JSDoc API
+- Documentation generators:
+  - Sphinx (Python)
+  - TypeDoc (TypeScript)
+```
+
+## Data Assembly Pipeline
+
+### 1. Data Collection Phase
+```javascript
+async function collectPRData(prUrl) {
+  // 1. Parse PR URL for details
+  const { owner, repo, number } = parsePRUrl(prUrl);
+  
+  // 2. Fetch PR data
+  const prData = await fetchPRData(owner, repo, number);
+  
+  // 3. Analyze code
+  const codeAnalysis = await analyzeCode(prData.files);
+  
+  // 4. Get project context
+  const projectContext = await getProjectContext(owner, repo);
+  
+  return {
+    prData,
+    codeAnalysis,
+    projectContext
+  };
+}
+```
+
+### 2. Context Assembly Phase
+```javascript
+async function assembleContext(collectedData) {
+  return {
+    // Core changes
+    changes: {
+      diff: collectedData.prData.diff,
+      files: collectedData.prData.files,
+      description: collectedData.prData.description
+    },
+    
+    // Analysis results
+    analysis: {
+      dependencies: collectedData.codeAnalysis.dependencies,
+      structure: collectedData.codeAnalysis.structure,
+      quality: collectedData.codeAnalysis.quality
+    },
+    
+    // Project context
+    context: {
+      structure: collectedData.projectContext.structure,
+      documentation: collectedData.projectContext.documentation
+    }
+  };
+}
+```
+
+### 3. Claude Request Preparation
+```javascript
+async function prepareClaudeRequest(assembledContext) {
+  return {
+    model: "claude-3-sonnet-20240229",
+    messages: [{
+      role: "user",
+      content: formatContextForClaude(assembledContext)
+    }],
+    max_tokens: 4096
+  };
+}
+```
+
+## API Requirements
+
+### 1. Core APIs
+```markdown
+- GitHub API Token
+- Claude API Token
+- Repository access permissions
+```
+
+### 2. Analysis Tools
+```markdown
+- Dependency analysis tool APIs
+- Code quality tool APIs
+- Documentation generator APIs
+```
+
+### 3. Rate Limits & Quotas
+```markdown
+Monitor:
+- GitHub API limits
+- Claude API usage
+- Tool-specific limits
+```
+
+## Implementation Priority
+
+### Phase 1 (MVP)
+```markdown
+Essential APIs:
+- GitHub API
+- Claude API
+- Basic code parser
+```
+
+### Phase 2
+```markdown
+Additional Tools:
+- Dependency analysis
+- Code quality checks
+- Documentation parsing
+```
+
+### Phase 3
+```markdown
+Advanced Features:
+- Custom analysis tools
+- Advanced parsing
+- Specialized checkers
+```
+
+## Error Handling
+
+```markdown
+1. API Failures
+- Retry mechanisms
+- Fallback options
+- Error reporting
+
+2. Data Collection
+- Partial data handling
+- Timeout management
+- Size limitations
+
+3. Context Assembly
+- Data validation
+- Format verification
+- Size optimization
+```
