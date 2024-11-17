@@ -1,12 +1,34 @@
 import anthropic
 from typing import Dict
+import re
 
 class ClaudeService:
     def __init__(self, api_key: str):
-        self.client = anthropic.Anthropic(api_key=api_key)
+        """Initialize Claude service with API key validation"""
+        if not api_key:
+            raise ValueError("Claude API key is required")
+            
+        # Verify API key format (should start with 'sk-ant-')
+        if not re.match(r'^sk-ant-', api_key):
+            raise ValueError("Invalid Claude API key format. Key should start with 'sk-ant-'")
+            
+        try:
+            self.client = anthropic.Anthropic(
+                api_key=api_key,
+                default_headers={
+                    "HTTP-Referer": "https://github.com",  # Set referer for API tracking
+                    "X-API-Lang": "python"  # Indicate API client language
+                }
+            )
+            # Verify client initialization by accessing a property
+            _ = self.client.api_key
+        except anthropic.AuthenticationError as e:
+            raise ValueError(f"Claude API authentication failed: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Failed to initialize Claude client: {str(e)}")
     
     def analyze_pr(self, context: Dict) -> Dict:
-        """Analyzes PR using Claude API"""
+        """Analyzes PR using Claude API with improved error handling"""
         try:
             prompt = self._build_analysis_prompt(context)
             
@@ -16,11 +38,19 @@ class ClaudeService:
                 messages=[{
                     "role": "user",
                     "content": prompt
-                }]
+                }],
+                temperature=0.7,  # Add temperature for consistent output
+                system="You are a code review expert. Analyze pull requests thoroughly and provide constructive feedback."
             )
             
             return self._parse_claude_response(message.content)
             
+        except anthropic.RateLimitError:
+            raise Exception("Rate limit exceeded. Please try again later.")
+        except anthropic.AuthenticationError:
+            raise Exception("Authentication failed. Please check your API key.")
+        except anthropic.BadRequestError as e:
+            raise Exception(f"Invalid request: {str(e)}")
         except Exception as e:
             raise Exception(f"Failed to analyze PR with Claude: {str(e)}")
     
@@ -48,7 +78,7 @@ Please analyze:
 5. Suggested improvements
 
 Provide your review in a structured format with clear sections."""
-
+    
     def _format_files(self, files: list) -> str:
         """Formats the files list for the prompt"""
         return "\n".join([
@@ -58,6 +88,9 @@ Provide your review in a structured format with clear sections."""
     
     def _parse_claude_response(self, response: str) -> Dict:
         """Parses Claude's response into structured format"""
+        if not response:
+            raise ValueError("Empty response from Claude")
+            
         return {
             'summary': response,
             'structured': True
