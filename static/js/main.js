@@ -38,7 +38,7 @@ function initializeTooltips() {
     }
 }
 
-// Save review function
+// Save review function with clipboard functionality
 async function saveReview() {
     const saveBtn = document.querySelector('.btn-success');
     if (!saveBtn) return;
@@ -47,18 +47,24 @@ async function saveReview() {
     saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
     
     try {
+        // Copy review content to clipboard
+        const reviewContent = document.querySelector('.review-content')?.innerText;
+        if (reviewContent) {
+            await navigator.clipboard.writeText(reviewContent);
+        }
+
         const response = await fetch('/save-review', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({}) // Empty object as required by Flask
+            body: JSON.stringify({})
         });
         
         const data = await response.json();
         
         if (response.ok) {
-            showAlert('Review saved successfully!', 'success');
+            showAlert('Review saved successfully and copied to clipboard!', 'success');
         } else {
             throw new Error(data.error || 'Failed to save review');
         }

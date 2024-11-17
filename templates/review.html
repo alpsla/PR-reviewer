@@ -35,7 +35,7 @@
             <div class="card-footer bg-dark border-top">
                 <div class="d-flex justify-content-between align-items-center">
                     <small class="text-muted">
-                        <i class="bi bi-clock me-2"></i>Generated at: {{ current_time.strftime('%H:%M:%S') }}
+                        <i class="bi bi-clock me-2"></i>Generated at: {{ current_time.strftime('%Y-%m-%d %H:%M:%S') }}
                         {% if review.is_mock %}
                         <br><i class="bi bi-info-circle me-2"></i>Note: This is a mock review.
                         {% endif %}
