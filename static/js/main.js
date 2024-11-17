@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const spinner = submitBtn?.querySelector('.spinner-border');
         
         if (submitBtn && spinner) {
-            prForm.addEventListener('submit', function(e) {
+            prForm.addEventListener('submit', function() {
                 submitBtn.disabled = true;
                 spinner.classList.remove('d-none');
                 submitBtn.innerHTML = '';
@@ -25,10 +25,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Helper function to get main container
+function getMainContainer() {
+    return document.querySelector('.container');
+}
+
 // Save review function
 async function saveReview() {
+    const container = getMainContainer();
     const reviewContent = document.querySelector('.review-content');
-    if (!reviewContent) return;
+    if (!container || !reviewContent) return;
     
     try {
         const response = await fetch('/save-review', {
@@ -52,8 +58,9 @@ async function saveReview() {
 
 // Post comment function
 async function postComment() {
+    const container = getMainContainer();
     const reviewContent = document.querySelector('.review-content');
-    if (!reviewContent) return;
+    if (!container || !reviewContent) return;
     
     try {
         const response = await fetch('/post-comment', {
@@ -86,7 +93,7 @@ async function postComment() {
 
 // Helper function to show alerts
 function showAlert(message, type = 'info') {
-    const container = document.querySelector('.container');
+    const container = getMainContainer();
     if (!container) return;
     
     const alertDiv = document.createElement('div');
