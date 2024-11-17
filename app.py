@@ -5,6 +5,7 @@ from sqlalchemy.orm import DeclarativeBase
 from services.github_service import GitHubService
 from services.claude_service import ClaudeService
 from utils.pr_parser import parse_pr_url
+from datetime import datetime
 import json
 
 class Base(DeclarativeBase):
@@ -48,7 +49,11 @@ def review():
         
         review = claude_service.analyze_pr(context)
         
-        return render_template('review.html', review=review, pr_url=pr_url)
+        return render_template('review.html', 
+            review=review, 
+            pr_url=pr_url,
+            current_time=datetime.utcnow()
+        )
         
     except Exception as e:
         flash(f'Error processing PR: {str(e)}', 'error')

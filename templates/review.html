@@ -32,7 +32,7 @@
             </div>
             <div class="card-footer text-muted">
                 <small>
-                    Review generated at: {{ current_time | default(now()) }}
+                    Review generated at: {{ current_time }}
                     {% if review.is_mock %}
                     <br>Note: This is a mock review. The actual AI review service is temporarily unavailable.
                     {% endif %}
