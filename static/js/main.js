@@ -63,7 +63,7 @@ async function saveReview() {
             throw new Error(data.error || 'Failed to save review');
         }
     } catch (error) {
-        showAlert(error.message, 'error');
+        showAlert('Failed to save review: ' + error.message, 'error');
     } finally {
         saveBtn.disabled = false;
         saveBtn.innerHTML = '<i class="bi bi-save me-2"></i>Save';
@@ -102,7 +102,7 @@ async function postComment() {
             throw new Error(data.error || 'Failed to post comment');
         }
     } catch (error) {
-        showAlert(error.message, 'error');
+        showAlert('Failed to post comment: ' + error.message, 'error');
     } finally {
         commentBtn.disabled = false;
         commentBtn.innerHTML = '<i class="bi bi-chat-text me-2"></i>Comment';
@@ -113,6 +113,7 @@ async function postComment() {
 function showAlert(message, type = 'info') {
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+    alertDiv.style.zIndex = '1050'; // Ensure alert is visible
     alertDiv.innerHTML = `
         ${type === 'error' ? '<i class="bi bi-exclamation-triangle-fill me-2"></i>' : 
           type === 'success' ? '<i class="bi bi-check-circle-fill me-2"></i>' : 

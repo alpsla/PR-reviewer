@@ -7,6 +7,7 @@ from services.claude_service import ClaudeService
 from utils.pr_parser import parse_pr_url
 from datetime import datetime
 from typing import Optional
+import jwt
 
 # Configure logging
 logging.basicConfig(
@@ -31,8 +32,37 @@ from models import Review
 github_token: Optional[str] = os.environ.get("GITHUB_TOKEN")
 claude_api_key: Optional[str] = os.environ.get("CLAUDE_API_KEY")
 
+def verify_github_token(token: str) -> tuple[bool, str]:
+    """Verify GitHub token permissions"""
+    if not token:
+        return False, "GitHub token not found"
+    
+    try:
+        # Try to decode token to check structure (won't work with new fine-grained tokens)
+        try:
+            decoded = jwt.decode(token, options={"verify_signature": False})
+            scopes = decoded.get('scopes', [])
+            if not ('repo' in scopes or 'public_repo' in scopes):
+                return False, "Token missing required permissions (repo or public_repo scope)"
+        except jwt.InvalidTokenError:
+            # Token might be a fine-grained token, proceed with service initialization
+            pass
+        
+        # Test token by initializing service
+        github_service = GitHubService(token)
+        return True, "Token verified successfully"
+    except Exception as e:
+        return False, f"Token verification failed: {str(e)}"
+
 if not github_token:
     logger.warning("GitHub token not found in environment variables")
+else:
+    token_valid, token_message = verify_github_token(github_token)
+    if not token_valid:
+        logger.error(f"GitHub token validation failed: {token_message}")
+    else:
+        logger.info("GitHub token validated successfully")
+
 if not claude_api_key:
     logger.warning("Claude API key not found in environment variables")
 
@@ -58,6 +88,16 @@ def review():
         if not pr_details:
             logger.error("Invalid PR URL format")
             flash('Invalid PR URL format. Please provide a valid GitHub pull request URL.', 'error')
+            return redirect(url_for('index'))
+
+        # Verify GitHub token before proceeding
+        if not github_token:
+            flash('GitHub token is not configured. Please contact administrator.', 'error')
+            return redirect(url_for('index'))
+        
+        token_valid, token_message = verify_github_token(github_token)
+        if not token_valid:
+            flash(f'GitHub token validation failed: {token_message}', 'error')
             return redirect(url_for('index'))
 
         # Fetch PR data
@@ -135,6 +175,11 @@ def post_comment():
     try:
         if not session.get('review_data') or not session.get('pr_details'):
             raise ValueError("No review data found in session")
+            
+        # Verify GitHub token before posting comment
+        token_valid, token_message = verify_github_token(github_token)
+        if not token_valid:
+            raise ValueError(f"GitHub token validation failed: {token_message}")
             
         review_data = session['review_data']
         pr_details = session['pr_details']
