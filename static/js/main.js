@@ -1,40 +1,47 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Form handling
-    const prForm = document.getElementById('prForm');
-    if (prForm) {
-        const submitBtn = prForm.querySelector('button[type="submit"]');
-        const spinner = submitBtn?.querySelector('.spinner-border');
-        
-        if (submitBtn && spinner) {
-            prForm.addEventListener('submit', function() {
-                submitBtn.disabled = true;
-                spinner.classList.remove('d-none');
-                submitBtn.innerHTML = '';
-                submitBtn.appendChild(spinner);
-                submitBtn.appendChild(document.createTextNode(' Analyzing...'));
-            });
-        }
+    const prForm = document.querySelector('#prForm');
+    if (!prForm) return;
+    
+    const submitBtn = prForm.querySelector('button[type="submit"]');
+    const spinner = submitBtn?.querySelector('.spinner-border');
+    
+    if (submitBtn && spinner) {
+        prForm.addEventListener('submit', function() {
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            submitBtn.innerHTML = '';
+            submitBtn.appendChild(spinner);
+            submitBtn.appendChild(document.createTextNode(' Analyzing...'));
+        });
     }
     
     // Initialize tooltips
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    if (tooltipTriggerList.length > 0) {
-        tooltipTriggerList.forEach(tooltipTriggerEl => {
-            new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    }
+    tooltipTriggerList.forEach(tooltipTriggerEl => {
+        if (tooltipTriggerEl) new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 });
 
 // Helper function to get main container
 function getMainContainer() {
-    return document.querySelector('.container');
+    const container = document.querySelector('.container');
+    if (!container) {
+        console.warn('Main container not found');
+        return null;
+    }
+    return container;
 }
 
 // Save review function
 async function saveReview() {
     const container = getMainContainer();
+    if (!container) return;
+    
     const reviewContent = document.querySelector('.review-content');
-    if (!container || !reviewContent) return;
+    if (!reviewContent) {
+        console.warn('Review content not found');
+        return;
+    }
     
     try {
         const response = await fetch('/save-review', {
@@ -59,8 +66,13 @@ async function saveReview() {
 // Post comment function
 async function postComment() {
     const container = getMainContainer();
+    if (!container) return;
+    
     const reviewContent = document.querySelector('.review-content');
-    if (!container || !reviewContent) return;
+    if (!reviewContent) {
+        console.warn('Review content not found');
+        return;
+    }
     
     try {
         const response = await fetch('/post-comment', {
@@ -94,7 +106,10 @@ async function postComment() {
 // Helper function to show alerts
 function showAlert(message, type = 'info') {
     const container = getMainContainer();
-    if (!container) return;
+    if (!container) {
+        console.warn('Cannot show alert: container not found');
+        return;
+    }
     
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
