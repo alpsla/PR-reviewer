@@ -1,6 +1,16 @@
+// Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
+    initializeForm();
+    initializeTooltips();
+});
+
+// Initialize form handling
+function initializeForm() {
     const prForm = document.querySelector('#prForm');
-    if (!prForm) return;
+    if (!prForm) {
+        console.debug('PR form not found - likely on a different page');
+        return;
+    }
     
     const submitBtn = prForm.querySelector('button[type="submit"]');
     const spinner = submitBtn?.querySelector('.spinner-border');
@@ -14,32 +24,47 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.appendChild(document.createTextNode(' Analyzing...'));
         });
     }
-    
-    // Initialize tooltips
+}
+
+// Initialize Bootstrap tooltips
+function initializeTooltips() {
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltipTriggerList.forEach(tooltipTriggerEl => {
-        if (tooltipTriggerEl) new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-});
+    if (tooltipTriggerList.length > 0) {
+        tooltipTriggerList.forEach(tooltipTriggerEl => {
+            if (tooltipTriggerEl) {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            }
+        });
+    }
+}
 
 // Helper function to get main container
 function getMainContainer() {
     const container = document.querySelector('.container');
     if (!container) {
-        console.warn('Main container not found');
+        console.debug('Main container not found');
         return null;
     }
     return container;
 }
 
+// Helper function to get review content
+function getReviewContent() {
+    const reviewContent = document.querySelector('.review-content');
+    if (!reviewContent) {
+        console.debug('Review content not found');
+        return null;
+    }
+    return reviewContent;
+}
+
 // Save review function
 async function saveReview() {
     const container = getMainContainer();
-    if (!container) return;
+    const reviewContent = getReviewContent();
     
-    const reviewContent = document.querySelector('.review-content');
-    if (!reviewContent) {
-        console.warn('Review content not found');
+    if (!container || !reviewContent) {
+        console.debug('Required elements not found for saving review');
         return;
     }
     
@@ -66,11 +91,10 @@ async function saveReview() {
 // Post comment function
 async function postComment() {
     const container = getMainContainer();
-    if (!container) return;
+    const reviewContent = getReviewContent();
     
-    const reviewContent = document.querySelector('.review-content');
-    if (!reviewContent) {
-        console.warn('Review content not found');
+    if (!container || !reviewContent) {
+        console.debug('Required elements not found for posting comment');
         return;
     }
     
@@ -107,7 +131,7 @@ async function postComment() {
 function showAlert(message, type = 'info') {
     const container = getMainContainer();
     if (!container) {
-        console.warn('Cannot show alert: container not found');
+        console.debug('Cannot show alert: container not found');
         return;
     }
     
@@ -121,6 +145,7 @@ function showAlert(message, type = 'info') {
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
     
+    // Insert alert at the beginning of the container
     container.insertBefore(alertDiv, container.firstChild);
     
     // Auto-dismiss after 5 seconds
@@ -129,7 +154,7 @@ function showAlert(message, type = 'info') {
             alertDiv.classList.remove('show');
             setTimeout(() => {
                 if (alertDiv && alertDiv.parentNode === container) {
-                    alertDiv.remove();
+                    container.removeChild(alertDiv);
                 }
             }, 150);
         }
