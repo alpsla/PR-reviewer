@@ -27,15 +27,31 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python main.py"
+args = "gunicorn --workers 1 --worker-class=sync --timeout 120 --bind 0.0.0.0:5000 --log-level=debug --preload wsgi:application"
 waitForPort = 5000
 
 [deployment]
-run = ["sh", "-c", "python main.py"]
+run = ["sh", "-c", "gunicorn --workers 1 --worker-class=sync --timeout 120 --bind 0.0.0.0:5000 --log-level=debug --preload wsgi:application"]
 
 [[ports]]
 localPort = 80
 externalPort = 3000
+
+[[ports]]
+localPort = 3000
+externalPort = 3001
+
+[[ports]]
+localPort = 3001
+externalPort = 3002
+
+[[ports]]
+localPort = 3002
+externalPort = 3003
+
+[[ports]]
+localPort = 3003
+externalPort = 4200
 
 [[ports]]
 localPort = 5000
