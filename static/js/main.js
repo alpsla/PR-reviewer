@@ -44,12 +44,15 @@ async function saveReview() {
     if (!saveBtn) return;
     
     saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
+    
     try {
         const response = await fetch('/save-review', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({}) // Empty object as required by Flask
         });
         
         const data = await response.json();
@@ -63,6 +66,7 @@ async function saveReview() {
         showAlert(error.message, 'error');
     } finally {
         saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="bi bi-save me-2"></i>Save';
     }
 }
 
@@ -72,12 +76,15 @@ async function postComment() {
     if (!commentBtn) return;
     
     commentBtn.disabled = true;
+    commentBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Posting...';
+    
     try {
         const response = await fetch('/post-comment', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({}) // Empty object as required by Flask
         });
         
         const data = await response.json();
@@ -98,6 +105,7 @@ async function postComment() {
         showAlert(error.message, 'error');
     } finally {
         commentBtn.disabled = false;
+        commentBtn.innerHTML = '<i class="bi bi-chat-text me-2"></i>Comment';
     }
 }
 
