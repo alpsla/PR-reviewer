@@ -1,11 +1,20 @@
 import anthropic
-from typing import Dict
-import re
+from typing import Dict, List, Union
+import logging
 import json
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 class ClaudeService:
     def __init__(self, api_key: str):
+        """Initialize Claude service with proper error handling"""
         if not api_key:
+            logger.warning("No Claude API key provided, falling back to mock service")
             self.use_mock = True
             return
             
@@ -19,17 +28,25 @@ class ClaudeService:
                     "X-Client-Version": "1.0.0"
                 }
             )
+            logger.info("Claude API client initialized successfully")
         except Exception as e:
+            logger.error(f"Failed to initialize Claude API client: {str(e)}")
             self.use_mock = True
+            self.init_error = str(e)
     
     def analyze_pr(self, context: Dict) -> Dict:
+        """Analyzes PR using Claude API with enhanced error handling"""
         if self.use_mock:
-            return self.mock_review(context)
+            logger.info("Using mock review service")
+            mock_reason = getattr(self, 'init_error', 'APIUnavailable')
+            return self.mock_review(context, mock_reason)
             
         try:
+            logger.info("Building analysis prompt")
             prompt = self._build_analysis_prompt(context)
             
-            message = self.client.messages.create(
+            logger.info("Sending request to Claude API")
+            response = self.client.messages.create(
                 model="claude-3-sonnet-20240229",
                 max_tokens=4096,
                 messages=[{
@@ -40,13 +57,30 @@ class ClaudeService:
                 system="You are a code review expert. Analyze pull requests thoroughly and provide constructive feedback focusing on code quality, security, and best practices."
             )
             
-            return self._parse_claude_response(message.content)
+            logger.info("Successfully received response from Claude API")
+            return self._parse_claude_response(response)
             
+        except anthropic.APIError as e:
+            logger.error(f"Claude API error: {str(e)}")
+            error_msg = f"API Error: {str(e)}"
+            return self.mock_review(context, error_msg)
+        except anthropic.APIConnectionError as e:
+            logger.error(f"Claude API connection error: {str(e)}")
+            error_msg = f"Connection Error: {str(e)}"
+            return self.mock_review(context, error_msg)
+        except anthropic.APITimeoutError as e:
+            logger.error(f"Claude API timeout: {str(e)}")
+            error_msg = "Request timed out"
+            return self.mock_review(context, error_msg)
         except Exception as e:
-            context['error'] = e
-            return self.mock_review(context)
+            logger.error(f"Unexpected error during PR analysis: {str(e)}")
+            error_msg = f"Unexpected error: {str(e)}"
+            return self.mock_review(context, error_msg)
     
-    def mock_review(self, context: Dict) -> Dict:
+    def mock_review(self, context: Dict, mock_reason: str = "APIUnavailable") -> Dict:
+        """Generate a detailed mock review response with error context"""
+        logger.info(f"Generating mock review. Reason: {mock_reason}")
+        
         files_count = context['pr_data']['changed_files']
         additions = context['pr_data']['additions']
         deletions = context['pr_data']['deletions']
@@ -148,17 +182,19 @@ class ClaudeService:
 </div>
 
 <div class="alert alert-warning mt-3">
-    <i class="bi bi-info-circle"></i> Note: This is a mock review generated for testing purposes.
+    <i class="bi bi-info-circle"></i> Note: This is a mock review generated for testing purposes. 
+    <br>Reason: {mock_reason}
 </div>"""
 
         return {
             'summary': mock_response,
             'structured': True,
             'is_mock': True,
-            'mock_reason': 'APIUnavailable'
+            'mock_reason': mock_reason
         }
     
     def _build_analysis_prompt(self, context: Dict) -> str:
+        """Builds a comprehensive analysis prompt for Claude"""
         pr_data = context['pr_data']
         files = context.get('files', [])
         comments = context.get('comments', [])
@@ -192,6 +228,7 @@ Format each section using Bootstrap cards and proper semantic HTML."""
         return prompt
     
     def _format_files(self, files: list) -> str:
+        """Formats the files list with detailed changes"""
         if not files:
             return "No file information available"
             
@@ -203,6 +240,7 @@ Format each section using Bootstrap cards and proper semantic HTML."""
         ])
     
     def _format_comments(self, comments: list) -> str:
+        """Formats PR comments for context"""
         if not comments:
             return "No previous discussion found"
             
@@ -213,12 +251,38 @@ Format each section using Bootstrap cards and proper semantic HTML."""
             for comment in comments[:5]
         ])
     
-    def _parse_claude_response(self, response: str) -> Dict:
-        if not response or not isinstance(response, str):
-            raise ValueError("Invalid response from Claude")
+    def _parse_claude_response(self, response: Union[Dict, any]) -> Dict:
+        """Parses Claude's response with enhanced validation and error handling"""
+        try:
+            if not response:
+                logger.error("Empty response received from Claude")
+                raise ValueError("Empty response from Claude")
             
-        return {
-            'summary': response,
-            'structured': True,
-            'is_mock': False
-        }
+            # Extract content from response based on Anthropic SDK v0.3+
+            if hasattr(response, 'content'):
+                # Handle list of content blocks
+                content = response.content[0].text if isinstance(response.content, list) else response.content
+            else:
+                # Fallback for other response structures
+                content = response.get('content', '') if isinstance(response, dict) else str(response)
+            
+            # Validate HTML structure
+            if not ('<div' in content and '</div>' in content):
+                logger.warning("Response doesn't contain expected HTML structure")
+                raise ValueError("Invalid response format: missing HTML structure")
+            
+            # Log successful parsing
+            logger.info("Successfully parsed Claude response")
+            
+            return {
+                'summary': content,
+                'structured': True,
+                'is_mock': False
+            }
+            
+        except (AttributeError, IndexError) as e:
+            logger.error(f"Failed to parse Claude response structure: {str(e)}")
+            raise ValueError(f"Invalid response structure: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error parsing Claude response: {str(e)}")
+            raise ValueError(f"Failed to parse response: {str(e)}")
