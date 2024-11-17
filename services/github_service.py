@@ -53,3 +53,18 @@ class GitHubService:
             } for comment in pr.get_comments()]
         except Exception as e:
             raise Exception(f"Failed to fetch PR comments: {str(e)}")
+            
+    def post_pr_comment(self, pr_details: Dict, comment_text: str) -> Dict:
+        """Posts a comment on the PR"""
+        try:
+            repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
+            pr = repo.get_pull(pr_details['number'])
+            
+            comment = pr.create_issue_comment(comment_text)
+            
+            return {
+                'id': str(comment.id),
+                'url': comment.html_url
+            }
+        except Exception as e:
+            raise Exception(f"Failed to post PR comment: {str(e)}")
