@@ -8,21 +8,66 @@
                 <h4>PR Review Results</h4>
                 <div>
                     {% if review.is_mock %}
-                    <span class="badge bg-warning me-2">Mock Review</span>
+                    <span class="badge bg-warning me-2" data-bs-toggle="tooltip" 
+                          title="Using mock review due to {{ review.mock_reason }}">
+                        Mock Review
+                    </span>
                     {% endif %}
-                    <a href="{{ pr_url }}" target="_blank" class="btn btn-outline-info">View PR on GitHub</a>
+                    <a href="{{ pr_url }}" target="_blank" class="btn btn-outline-info">
+                        <i class="bi bi-github"></i> View PR on GitHub
+                    </a>
                 </div>
             </div>
             <div class="card-body">
-                <div class="review-content">
-                    {{ review.summary | safe }}
+                {% if review.structured %}
+                <div class="review-content markdown-content">
+                    {{ review.summary | safe | replace('\n', '<br>') | replace('•', '&bull;') }}
                 </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    The review response format was unexpected. Please try again.
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer text-muted">
+                <small>
+                    Review generated at: {{ current_time | default(now()) }}
+                    {% if review.is_mock %}
+                    <br>Note: This is a mock review. The actual AI review service is temporarily unavailable.
+                    {% endif %}
+                </small>
             </div>
         </div>
     </div>
 </div>
 
 <div class="mt-4">
-    <a href="{{ url_for('index') }}" class="btn btn-secondary">Review Another PR</a>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Review Another PR
+    </a>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .review-content {
+        white-space: pre-line;
+    }
+    .markdown-content {
+        line-height: 1.6;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
 {% endblock %}
