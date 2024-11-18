@@ -129,12 +129,14 @@
     }
 
     /* Additional styles for better theme support */
+    [data-bs-theme="light"] .review-section li,
     [data-bs-theme="light"] .review-content,
-    [data-bs-theme="light"] .review-section,
-    [data-bs-theme="light"] .review-section ul li,
-    [data-bs-theme="light"] .card-header h4,
-    [data-bs-theme="light"] .text-muted {
+    [data-bs-theme="light"] .review-section {
         color: var(--text-primary) !important;
+    }
+
+    [data-bs-theme="light"] .text-muted {
+        color: var(--text-secondary) !important;
     }
 
     .review-section {

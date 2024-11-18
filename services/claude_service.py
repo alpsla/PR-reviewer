@@ -191,9 +191,7 @@ class ClaudeService:
         files = context.get('files', [])
         comments = context.get('comments', [])
 
-        prompt = f"""Please analyze this pull request and format the response with HTML and Bootstrap:
-
-PR Details:
+        prompt = f"""PR Details:
 Title: {pr_data['title']}
 Description: {pr_data['body'] or 'No description provided'}
 
