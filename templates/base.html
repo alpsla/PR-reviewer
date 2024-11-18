@@ -73,8 +73,30 @@
 
         .navbar {
             backdrop-filter: blur(8px);
-            background-color: rgba(31, 41, 55, 0.95);
             z-index: 1030;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        [data-bs-theme="dark"] .navbar {
+            background-color: rgba(31, 41, 55, 0.95);
+            border-color: rgba(75, 85, 99, 0.5);
+        }
+
+        [data-bs-theme="light"] .navbar {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-color: rgba(229, 231, 235, 0.5);
+        }
+
+        [data-bs-theme="light"] .navbar .text-light {
+            color: #1F2937 !important;
+        }
+
+        [data-bs-theme="light"] .navbar .btn-icon {
+            color: #3B82F6;
+        }
+
+        [data-bs-theme="light"] .navbar .navbar-toggler {
+            color: #1F2937;
         }
 
         .btn-icon {
@@ -126,7 +148,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg fixed-top bg-gray-800 border-bottom border-gray-700">
+    <nav class="navbar navbar-expand-lg fixed-top border-bottom">
         <div class="container-fluid px-4 py-2">
             <div class="d-flex justify-content-between w-100">
                 <!-- Logo and Brand -->
