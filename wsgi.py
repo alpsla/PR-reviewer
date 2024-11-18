@@ -1,6 +1,7 @@
 from app import app
 import logging
 import sys
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -18,7 +19,8 @@ application = app
 if __name__ == "__main__":
     try:
         logger.info("Starting PR Review Assistant application...")
-        app.run(host="0.0.0.0", port=5000)
+        port = int(os.environ.get("PORT", 5000))
+        application.run(host="0.0.0.0", port=port)
     except Exception as e:
         logger.error(f"Failed to start application: {str(e)}")
         sys.exit(1)
