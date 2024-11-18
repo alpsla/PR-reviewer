@@ -6,7 +6,7 @@
     <title>PR Review Assistant</title>
     
     <!-- Favicon configuration -->
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/qa-shield-logo.svg') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/favicon-16x16.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
@@ -37,7 +37,7 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 767px) {  /* Change from 640px to 767px */
             .container {
                 padding-left: 1rem;
                 padding-right: 1rem;
@@ -46,9 +46,12 @@
                 width: 28px;
                 height: 28px;
             }
+            .navbar-brand .brand-text {
+                font-size: 1.1rem;
+            }
         }
 
-        @media (min-width: 641px) and (max-width: 1023px) {
+        @media (min-width: 768px) and (max-width: 1023px) {
             .container {
                 max-width: 768px;
             }
@@ -86,8 +89,8 @@
                     <circle cx="160" cy="160" r="8" fill="#60A5FA"/>
                 </svg>
                 <span class="ms-2 brand-text fw-bold text-light">
-                    <span class="d-none d-sm-inline">PR Review Assistant</span>
-                    <span class="d-sm-none">PR Review</span>
+                    <span class="d-none d-md-inline">PR Review Assistant</span>
+                    <span class="d-md-none">PR Review</span>
                 </span>
             </a>
         </div>
