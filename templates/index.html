@@ -8,7 +8,7 @@
                 <h4 class="mb-4 fw-bold" style="color: var(--primary-color);">Submit Pull Request</h4>
                 <form action="{{ url_for('review') }}" method="POST" id="prForm">
                     <div class="mb-4">
-                        <label for="pr_url" class="form-label text-light">GitHub PR URL</label>
+                        <label for="pr_url" class="form-label" style="color: var(--text-primary);">GitHub PR URL</label>
                         <input type="url" 
                                class="form-control form-control-lg" 
                                id="pr_url" 
@@ -26,4 +26,33 @@
         </div>
     </div>
 </div>
+
+<style>
+    .form-control {
+        background-color: var(--card-bg);
+        border-color: rgba(156, 163, 175, 0.2);
+        color: var(--text-primary);
+    }
+
+    .form-control:focus {
+        background-color: var(--card-bg);
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+        color: var(--text-primary);
+    }
+
+    .form-text {
+        color: var(--text-secondary) !important;
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .btn-primary:hover {
+        background-color: var(--primary-hover);
+        border-color: var(--primary-hover);
+    }
+</style>
 {% endblock %}

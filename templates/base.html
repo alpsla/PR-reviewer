@@ -15,28 +15,21 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         :root {
-            --primary-color: #60A5FA;
+            --primary-color: #3B82F6;
+            --primary-hover: #2563EB;
             --dark-bg: #111827;
             --card-bg: #1F2937;
+            --text-primary: #F9FAFB;
+            --text-secondary: #D1D5DB;
         }
 
         [data-bs-theme="light"] {
-            --dark-bg: #ffffff;
-            --card-bg: #f8f9fa;
-        }
-
-        .brand-text {
-            font-size: 1.25rem;
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-
-        [data-bs-theme="light"] .brand-text {
-            color: #3B82F6;
-        }
-
-        [data-bs-theme="dark"] .brand-text {
-            color: #60A5FA;
+            --primary-color: #2563EB;
+            --primary-hover: #1D4ED8;
+            --dark-bg: #F9FAFB;
+            --card-bg: #FFFFFF;
+            --text-primary: #111827;
+            --text-secondary: #4B5563;
         }
 
         body {
@@ -63,16 +56,26 @@
             border-color: rgba(229, 231, 235, 0.5);
         }
 
-        [data-bs-theme="light"] .navbar .text-light {
-            color: #1F2937 !important;
+        .btn-link {
+            color: var(--text-secondary) !important;
         }
 
-        [data-bs-theme="light"] .navbar .btn-icon {
-            color: #3B82F6;
+        .btn-link:hover {
+            color: var(--primary-color) !important;
         }
 
-        [data-bs-theme="light"] .navbar .navbar-toggler {
-            color: #1F2937;
+        .brand-text {
+            color: var(--primary-color) !important;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .navbar-toggler {
+            color: var(--text-primary);
+        }
+
+        .navbar-collapse {
+            background-color: var(--card-bg);
         }
 
         .btn-icon {
@@ -174,15 +177,15 @@
                 <div class="collapse navbar-collapse" id="navbarContent">
                     <div class="d-md-none">
                         <div class="p-3">
-                            <button class="btn btn-link text-light w-100 text-start">Dashboard</button>
-                            <button class="btn btn-link text-light w-100 text-start">History</button>
-                            <button class="btn btn-link text-light w-100 text-start">Settings</button>
+                            <button class="btn btn-link w-100 text-start">Dashboard</button>
+                            <button class="btn btn-link w-100 text-start">History</button>
+                            <button class="btn btn-link w-100 text-start">Settings</button>
                         </div>
                     </div>
                     <div class="d-none d-md-flex align-items-center">
-                        <button class="btn btn-link text-light">Dashboard</button>
-                        <button class="btn btn-link text-light">History</button>
-                        <button class="btn btn-link text-light">Settings</button>
+                        <button class="btn btn-link">Dashboard</button>
+                        <button class="btn btn-link">History</button>
+                        <button class="btn btn-link">Settings</button>
                     </div>
                 </div>
 
@@ -195,7 +198,7 @@
                         <i class="bi bi-person-fill"></i>
                     </button>
                     <button class="navbar-toggler d-md-none ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-                        <i class="bi bi-list text-light"></i>
+                        <i class="bi bi-list"></i>
                     </button>
                 </div>
             </div>
@@ -225,7 +228,7 @@
             </div>
         </main>
 
-        <footer class="py-4 bg-gray-800 border-top border-gray-700 mt-auto">
+        <footer class="py-4 border-top mt-auto">
             <div class="container text-center">
                 <p class="text-muted mb-0">© 2024 PR Review Assistant. All rights reserved.</p>
             </div>
