@@ -15,6 +15,10 @@ author = "agent"
 task = "workflow.run"
 args = "PR Review Assistant"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Generate Favicons"
+
 [[workflows.workflow]]
 name = "PR Review Assistant"
 author = "agent"
@@ -29,6 +33,20 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "gunicorn --workers 1 --worker-class=sync --timeout 120 --bind 0.0.0.0:5000 --log-level=debug --preload wsgi:application"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Generate Favicons"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 scripts/generate_favicons.py"
 
 [deployment]
 run = ["sh", "-c", "gunicorn --workers 1 --worker-class=sync --timeout 120 --bind 0.0.0.0:5000 --log-level=debug --preload wsgi:application"]
