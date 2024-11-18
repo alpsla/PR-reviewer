@@ -60,18 +60,17 @@
 
 {% block extra_css %}
 <style>
-    [data-bs-theme="light"] .review-content {
-        color: var(--text-primary);
+    [data-bs-theme="light"] .review-content,
+    [data-bs-theme="light"] .review-section,
+    [data-bs-theme="light"] .review-section ul li,
+    [data-bs-theme="light"] .card-header h4,
+    [data-bs-theme="light"] .text-muted {
+        color: var(--text-primary) !important;
     }
 
-    [data-bs-theme="light"] .card-header {
+    [data-bs-theme="light"] .review-section .card {
         background-color: var(--card-bg);
-        border-bottom-color: rgba(0, 0, 0, 0.1);
-    }
-
-    [data-bs-theme="light"] .card-footer {
-        background-color: var(--card-bg);
-        border-top-color: rgba(0, 0, 0, 0.1);
+        border-color: rgba(0, 0, 0, 0.1);
     }
 
     .review-section {
@@ -85,14 +84,6 @@
     .review-section .card {
         background-color: var(--card-bg);
         border: 1px solid rgba(156, 163, 175, 0.2);
-    }
-
-    [data-bs-theme="light"] .review-section .card {
-        border-color: rgba(0, 0, 0, 0.1);
-    }
-
-    .review-section ul li {
-        color: var(--text-primary);
     }
 
     .btn {
