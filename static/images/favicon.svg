@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <!-- Solid background fill for maximum contrast -->
-  <circle cx="16" cy="15" r="11" fill="#FFFFFF" stroke="#0036B3" stroke-width="4"/>
+  <circle cx="16" cy="15" r="11" fill="#FFFFFF" stroke="#0036B3" stroke-width="5"/>
   
   <!-- Thicker tail of "Q" -->
-  <path d="M22 21 L25 24" stroke="#0036B3" stroke-width="4" stroke-linecap="round"/>
+  <path d="M22 21 L25 24" stroke="#0036B3" stroke-width="5" stroke-linecap="round"/>
   
   <!-- Bolder checkmark -->
-  <path d="M11 15 L15 19 L21 13" fill="none" stroke="#0036B3" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11 15 L15 19 L21 13" fill="none" stroke="#0036B3" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
