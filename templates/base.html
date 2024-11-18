@@ -28,8 +28,10 @@
             --primary-hover: #1D4ED8;
             --dark-bg: #F9FAFB;
             --card-bg: #FFFFFF;
-            --text-primary: #111827;
+            --text-primary: #1F2937;
             --text-secondary: #4B5563;
+            --tag-bg: #EFF6FF;
+            --tag-text: #1E40AF;
         }
 
         body {
@@ -95,6 +97,29 @@
         .btn-icon:hover {
             background-color: rgba(96, 165, 250, 0.1);
             transform: scale(1.05);
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem;
+        }
+
+        .card-header h4 {
+            margin: 0;
+        }
+
+        [data-bs-theme="light"] .badge {
+            background-color: var(--tag-bg) !important;
+            color: var(--tag-text) !important;
+        }
+
+        [data-bs-theme="light"] .btn-outline-info {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        [data-bs-theme="light"] .btn-outline-info:hover {
+            background-color: var(--primary-color);
+            color: white;
         }
 
         @media (max-width: 767px) {
@@ -195,10 +220,10 @@
     </nav>
 
     <div class="d-flex flex-column vh-100">
-        <main class="flex-grow-1 container d-flex align-items-center justify-content-center">
-            <div class="w-100">
+        <main class="flex-grow-1 container-fluid px-4">
+            <div class="w-100 py-4">
                 <div class="row">
-                    <div class="col-md-6 mx-auto">
+                    <div class="col-12 col-xl-10 mx-auto">
                         {% with messages = get_flashed_messages(with_categories=true) %}
                             {% if messages %}
                                 {% for category, message in messages %}
