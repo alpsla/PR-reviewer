@@ -25,42 +25,18 @@
             --card-bg: #f8f9fa;
         }
 
-        [data-bs-theme="light"] .text-light {
-            color: #1F2937 !important;
+        .brand-text {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+            font-weight: 600;
         }
 
-        [data-bs-theme="light"] .form-label {
-            color: #1F2937 !important;
+        [data-bs-theme="light"] .brand-text {
+            color: #3B82F6;
         }
 
-        [data-bs-theme="light"] .form-text {
-            color: #4B5563 !important;
-        }
-
-        [data-bs-theme="light"] .text-muted {
-            color: #6B7280 !important;
-        }
-
-        [data-bs-theme="light"] .form-control {
-            background-color: #ffffff;
-            border-color: #E5E7EB;
-            color: #1F2937;
-        }
-
-        [data-bs-theme="light"] .form-control:focus {
-            background-color: #ffffff;
-            border-color: #60A5FA;
-            box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25);
-        }
-
-        [data-bs-theme="light"] .btn-primary {
-            background-color: #60A5FA;
-            border-color: #60A5FA;
-        }
-
-        [data-bs-theme="light"] .btn-primary:hover {
-            background-color: #3B82F6;
-            border-color: #3B82F6;
+        [data-bs-theme="dark"] .brand-text {
+            color: #60A5FA;
         }
 
         body {
@@ -111,17 +87,9 @@
             transform: scale(1.05);
         }
 
-        .brand-text {
-            font-size: 1.25rem;
-            color: #fff;
-        }
-
         @media (max-width: 767px) {
             .brand-text {
                 font-size: 1.1rem;
-            }
-            main {
-                margin-top: 3.5rem !important;
             }
         }
 
@@ -144,6 +112,39 @@
         [data-bs-theme="light"] .card {
             border-color: rgba(0, 0, 0, 0.1);
         }
+
+        main {
+            margin-top: 4rem;
+        }
+
+        .main-content-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card {
+            flex: 1 0 25%;
+            min-width: 250px;
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                flex: 1 0 50%;
+                min-width: 150px;
+            }
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -154,25 +155,16 @@
                 <!-- Logo and Brand -->
                 <div class="d-flex align-items-center">
                     <svg viewBox="0 0 200 200" class="logo-svg me-3">
-                        <!-- Background circle -->
                         <circle cx="100" cy="100" r="90" fill="#60A5FA" opacity="0.1"/>
-                        
-                        <!-- Main "Q" circle -->
                         <circle cx="100" cy="95" r="60" fill="none" stroke="#60A5FA" stroke-width="8"/>
-                        
-                        <!-- Tail of "Q" -->
                         <path d="M130 135 L150 155" stroke="#60A5FA" stroke-width="8" stroke-linecap="round"/>
-                        
-                        <!-- Checkmark inside -->
                         <path d="M75 95 L95 115 L125 85" fill="none" stroke="#60A5FA" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-                        
-                        <!-- Small circles representing testing/monitoring -->
                         <circle cx="160" cy="40" r="8" fill="#60A5FA"/>
                         <circle cx="40" cy="160" r="8" fill="#60A5FA"/>
                         <circle cx="40" cy="40" r="8" fill="#60A5FA"/>
                         <circle cx="160" cy="160" r="8" fill="#60A5FA"/>
                     </svg>
-                    <span class="brand-text fw-semibold">
+                    <span class="brand-text">
                         <span class="d-none d-md-inline">PR Review Assistant</span>
                         <span class="d-inline d-md-none">PR Review</span>
                     </span>
@@ -202,7 +194,6 @@
                     <button class="btn btn-icon">
                         <i class="bi bi-person-fill"></i>
                     </button>
-                    <!-- Move mobile menu button here -->
                     <button class="navbar-toggler d-md-none ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
                         <i class="bi bi-list text-light"></i>
                     </button>
@@ -212,7 +203,6 @@
     </nav>
 
     <div class="d-flex flex-column min-vh-100">
-        <!-- Add padding-top to account for fixed navbar -->
         <main class="flex-grow-1 container py-5" style="margin-top: 4rem;">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -230,10 +220,11 @@
                 {% endif %}
             {% endwith %}
 
-            {% block content %}{% endblock %}
+            <div class="main-content-wrapper">
+                {% block content %}{% endblock %}
+            </div>
         </main>
 
-        <!-- Add footer -->
         <footer class="py-4 bg-gray-800 border-top border-gray-700 mt-auto">
             <div class="container text-center">
                 <p class="text-muted mb-0">© 2024 PR Review Assistant. All rights reserved.</p>

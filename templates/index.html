@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row min-vh-100 align-items-center justify-content-center">
-    <div class="col-md-6">
+<div class="row min-vh-100">
+    <div class="col-md-6 m-auto">
         <div class="card border-0 shadow">
             <div class="card-body p-4">
-                <h4 class="mb-4 text-light">Submit Pull Request</h4>
+                <h4 class="mb-4 fw-bold" style="color: var(--primary-color);">Submit Pull Request</h4>
                 <form action="{{ url_for('review') }}" method="POST" id="prForm">
                     <div class="mb-4">
                         <label for="pr_url" class="form-label text-light">GitHub PR URL</label>
