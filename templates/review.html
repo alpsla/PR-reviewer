@@ -32,7 +32,7 @@
                 </div>
                 {% endif %}
             </div>
-            <div class="card-footer bg-dark border-top">
+            <div class="card-footer p-4">
                 <div class="d-flex align-items-center">
                     <small class="text-muted flex-grow-1">
                         <i class="bi bi-clock me-2"></i>Generated at: {{ current_time.strftime('%Y-%m-%d %H:%M:%S') }}
@@ -71,6 +71,38 @@
     [data-bs-theme="light"] .review-section .card {
         background-color: var(--card-bg);
         border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .card-footer {
+        background-color: var(--card-bg);
+        border-top: 1px solid rgba(156, 163, 175, 0.2);
+    }
+
+    [data-bs-theme="light"] .card-footer {
+        background-color: var(--card-bg);
+        border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-success, .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: #ffffff;
+    }
+
+    .btn-success:hover, .btn-primary:hover {
+        background-color: var(--primary-hover);
+        border-color: var(--primary-hover);
+        color: #ffffff;
+    }
+
+    .btn-success {
+        background-color: #10B981;
+        border-color: #10B981;
+    }
+
+    .btn-success:hover {
+        background-color: #059669;
+        border-color: #059669;
     }
 
     .review-section {
