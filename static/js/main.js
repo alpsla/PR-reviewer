@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     initializeForm();
     initializeTooltips();
+    initializeTheme();
 });
 
 // Initialize form handling
@@ -36,6 +37,31 @@ function initializeTooltips() {
             }
         });
     }
+}
+
+// Initialize theme
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    const themeIcon = document.querySelector('#themeToggle i');
+    if (themeIcon) {
+        themeIcon.classList.remove('bi-moon-fill', 'bi-sun-fill');
+        themeIcon.classList.add(savedTheme === 'dark' ? 'bi-moon-fill' : 'bi-sun-fill');
+    }
+}
+
+// Toggle theme function
+function toggleTheme() {
+    const html = document.documentElement;
+    const themeIcon = document.querySelector('#themeToggle i');
+    const currentTheme = html.getAttribute('data-bs-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    html.setAttribute('data-bs-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    themeIcon.classList.remove('bi-moon-fill', 'bi-sun-fill');
+    themeIcon.classList.add(newTheme === 'dark' ? 'bi-moon-fill' : 'bi-sun-fill');
 }
 
 // Save review function with clipboard functionality

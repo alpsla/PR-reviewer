@@ -105,16 +105,30 @@
                     </span>
                 </div>
 
+                <!-- Mobile Menu Button -->
+                <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                    <i class="bi bi-list text-light"></i>
+                </button>
+
                 <!-- Navigation -->
-                <div class="d-none d-md-flex align-items-center">
-                    <button class="btn btn-link text-light">Dashboard</button>
-                    <button class="btn btn-link text-light">History</button>
-                    <button class="btn btn-link text-light">Settings</button>
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <div class="d-md-none">
+                        <div class="p-3">
+                            <button class="btn btn-link text-light w-100 text-start">Dashboard</button>
+                            <button class="btn btn-link text-light w-100 text-start">History</button>
+                            <button class="btn btn-link text-light w-100 text-start">Settings</button>
+                        </div>
+                    </div>
+                    <div class="d-none d-md-flex align-items-center">
+                        <button class="btn btn-link text-light">Dashboard</button>
+                        <button class="btn btn-link text-light">History</button>
+                        <button class="btn btn-link text-light">Settings</button>
+                    </div>
                 </div>
 
                 <!-- User Controls -->
                 <div class="d-flex align-items-center gap-3">
-                    <button class="btn btn-icon">
+                    <button class="btn btn-icon" id="themeToggle" onclick="toggleTheme()">
                         <i class="bi bi-moon-fill"></i>
                     </button>
                     <button class="btn btn-icon">
