@@ -25,6 +25,18 @@
             --card-bg: #f8f9fa;
         }
 
+        [data-bs-theme="light"] .text-light {
+            color: #1F2937 !important;
+        }
+
+        [data-bs-theme="light"] .form-label {
+            color: #1F2937 !important;
+        }
+
+        [data-bs-theme="light"] .form-text {
+            color: #4B5563 !important;
+        }
+
         body {
             background-color: var(--dark-bg);
             min-height: 100vh;
@@ -137,7 +149,7 @@
                 <!-- User Controls -->
                 <div class="d-flex align-items-center gap-3">
                     <button class="btn btn-icon" id="themeToggle" onclick="toggleTheme()">
-                        <i class="bi bi-moon-fill"></i>
+                        <i class="bi bi-sun-fill"></i>
                     </button>
                     <button class="btn btn-icon">
                         <i class="bi bi-person-fill"></i>

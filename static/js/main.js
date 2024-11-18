@@ -44,6 +44,7 @@ function initializeTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     const html = document.documentElement;
     const body = document.body;
+    const themeIcon = document.querySelector('#themeToggle i');
     
     html.setAttribute('data-bs-theme', savedTheme);
     
@@ -51,15 +52,19 @@ function initializeTheme() {
     if (savedTheme === 'light') {
         body.classList.remove('bg-dark');
         body.classList.add('bg-light');
+        // Show moon icon in light mode
+        if (themeIcon) {
+            themeIcon.classList.remove('bi-sun-fill');
+            themeIcon.classList.add('bi-moon-fill');
+        }
     } else {
         body.classList.remove('bg-light');
         body.classList.add('bg-dark');
-    }
-    
-    const themeIcon = document.querySelector('#themeToggle i');
-    if (themeIcon) {
-        themeIcon.classList.remove('bi-moon-fill', 'bi-sun-fill');
-        themeIcon.classList.add(savedTheme === 'dark' ? 'bi-moon-fill' : 'bi-sun-fill');
+        // Show sun icon in dark mode
+        if (themeIcon) {
+            themeIcon.classList.remove('bi-moon-fill');
+            themeIcon.classList.add('bi-sun-fill');
+        }
     }
 }
 
@@ -78,17 +83,19 @@ function toggleTheme() {
     if (newTheme === 'light') {
         body.classList.remove('bg-dark');
         body.classList.add('bg-light');
+        // Show moon icon in light mode
+        themeIcon.classList.remove('bi-sun-fill');
+        themeIcon.classList.add('bi-moon-fill');
     } else {
         body.classList.remove('bg-light');
         body.classList.add('bg-dark');
+        // Show sun icon in dark mode
+        themeIcon.classList.remove('bi-moon-fill');
+        themeIcon.classList.add('bi-sun-fill');
     }
     
     // Store preference
     localStorage.setItem('theme', newTheme);
-    
-    // Update icon
-    themeIcon.classList.remove('bi-moon-fill', 'bi-sun-fill');
-    themeIcon.classList.add(newTheme === 'dark' ? 'bi-moon-fill' : 'bi-sun-fill');
 }
 
 // Save review function with clipboard functionality
@@ -143,7 +150,7 @@ async function postComment() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({}) // Empty object as required by Flask
+            body: JSON.stringify({})
         });
         
         const data = await response.json();
@@ -172,7 +179,7 @@ async function postComment() {
 function showAlert(message, type = 'info') {
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
-    alertDiv.style.zIndex = '1050'; // Ensure alert is visible
+    alertDiv.style.zIndex = '1050';
     alertDiv.innerHTML = `
         ${type === 'error' ? '<i class="bi bi-exclamation-triangle-fill me-2"></i>' : 
           type === 'success' ? '<i class="bi bi-check-circle-fill me-2"></i>' : 
@@ -187,10 +194,8 @@ function showAlert(message, type = 'info') {
         return;
     }
     
-    // Insert alert at the beginning of the container
     container.insertBefore(alertDiv, container.firstChild);
     
-    // Auto-dismiss after 5 seconds
     setTimeout(() => {
         if (alertDiv && alertDiv.parentNode === container) {
             alertDiv.classList.remove('show');
