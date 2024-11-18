@@ -32,7 +32,7 @@
                 </div>
                 {% endif %}
             </div>
-            <div class="card-footer p-4">
+            <div class="card-footer">
                 <div class="d-flex align-items-center">
                     <small class="text-muted flex-grow-1">
                         <i class="bi bi-clock me-2"></i>Generated at: {{ current_time.strftime('%Y-%m-%d %H:%M:%S') }}
@@ -60,59 +60,6 @@
 
 {% block extra_css %}
 <style>
-    [data-bs-theme="light"] .review-content,
-    [data-bs-theme="light"] .review-section,
-    [data-bs-theme="light"] .review-section ul li,
-    [data-bs-theme="light"] .card-header h4,
-    [data-bs-theme="light"] .text-muted {
-        color: var(--text-primary) !important;
-    }
-
-    [data-bs-theme="light"] .review-section .card {
-        background-color: var(--card-bg);
-        border-color: rgba(0, 0, 0, 0.1);
-    }
-
-    .card-footer {
-        background-color: var(--card-bg);
-        border-top: 1px solid rgba(156, 163, 175, 0.2);
-    }
-
-    [data-bs-theme="light"] .card-footer {
-        background-color: var(--card-bg);
-        border-color: rgba(0, 0, 0, 0.1);
-    }
-
-    .btn-success, .btn-primary {
-        background-color: var(--primary-color);
-        border-color: var(--primary-color);
-        color: #ffffff;
-    }
-
-    .btn-success:hover, .btn-primary:hover {
-        background-color: var(--primary-hover);
-        border-color: var(--primary-hover);
-        color: #ffffff;
-    }
-
-    .btn-success {
-        background-color: #10B981;
-        border-color: #10B981;
-    }
-
-    .btn-success:hover {
-        background-color: #059669;
-        border-color: #059669;
-    }
-
-    .review-section {
-        margin-bottom: 1.5rem;
-    }
-
-    .review-section:last-child {
-        margin-bottom: 0;
-    }
-
     .review-section h3 {
         background-color: rgba(59, 130, 246, 0.1);
         padding: 0.75rem 1rem;
@@ -133,53 +80,72 @@
         vertical-align: -0.125rem;
     }
 
-    .review-section .bi-check-circle {
-        color: #10B981;
-    }
+    /* Update icon colors */
+    .review-section .bi-check-circle { color: #10B981; }
+    .review-section .bi-exclamation-triangle { color: #F59E0B; }
+    .review-section .bi-exclamation-circle { color: #EF4444; }
+    .review-section .bi-shield-exclamation { color: #8B5CF6; }
+    .review-section .bi-speedometer2 { color: #3B82F6; }
+    .review-section .bi-lightning-charge { color: #F59E0B; }
+    .review-section .bi-graph-up { color: #10B981; }
+    .review-section .bi-database-check { color: #6366F1; }
 
-    .review-section .bi-exclamation-triangle {
-        color: #F59E0B;
-    }
-
-    .review-section .bi-exclamation-circle {
-        color: #EF4444;
-    }
-
-    .review-section .bi-shield-exclamation {
-        color: #8B5CF6;
-    }
-
-    .review-section .bi-speedometer2 {
-        color: #3B82F6;
-    }
-
-    .review-section .bi-lightning-charge {
-        color: #F59E0B;
-    }
-
-    .review-section .bi-graph-up {
-        color: #10B981;
-    }
-
-    .review-section .bi-database-check {
-        color: #6366F1;
-    }
-
+    /* List item styling */
     .review-section li {
         display: flex;
         align-items: center;
         margin-bottom: 0.5rem;
+        color: var(--text-primary);
     }
 
-    .review-section li:last-child {
-        margin-bottom: 0;
-    }
-
+    /* Card styling */
     .review-section .card {
         background-color: var(--card-bg);
         border: 1px solid rgba(156, 163, 175, 0.2);
     }
 
+    .card-footer {
+        padding: 1.5rem;
+        background-color: var(--card-bg);
+        border-top: 1px solid rgba(156, 163, 175, 0.2);
+    }
+
+    [data-bs-theme="light"] .card-footer {
+        background-color: var(--card-bg);
+        border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Button styling */
+    .btn-success, .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: #ffffff;
+    }
+
+    .btn-success:hover, .btn-primary:hover {
+        background-color: var(--primary-hover);
+        border-color: var(--primary-hover);
+        color: #ffffff;
+    }
+
+    /* Additional styles for better theme support */
+    [data-bs-theme="light"] .review-content,
+    [data-bs-theme="light"] .review-section,
+    [data-bs-theme="light"] .review-section ul li,
+    [data-bs-theme="light"] .card-header h4,
+    [data-bs-theme="light"] .text-muted {
+        color: var(--text-primary) !important;
+    }
+
+    .review-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .review-section:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Button hover effects */
     .btn {
         transition: all 0.2s ease-in-out;
     }
@@ -199,10 +165,15 @@
 <script>
     // Initialize tooltips
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         tooltipTriggerList.forEach(tooltipTriggerEl => {
             new bootstrap.Tooltip(tooltipTriggerEl);
         });
+
+        // Set theme from localStorage
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
     });
 </script>
 {% endblock %}
