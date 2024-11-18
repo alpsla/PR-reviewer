@@ -42,7 +42,20 @@ function initializeTooltips() {
 // Initialize theme
 function initializeTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
-    document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    const html = document.documentElement;
+    const body = document.body;
+    
+    html.setAttribute('data-bs-theme', savedTheme);
+    
+    // Update body classes
+    if (savedTheme === 'light') {
+        body.classList.remove('bg-dark');
+        body.classList.add('bg-light');
+    } else {
+        body.classList.remove('bg-light');
+        body.classList.add('bg-dark');
+    }
+    
     const themeIcon = document.querySelector('#themeToggle i');
     if (themeIcon) {
         themeIcon.classList.remove('bi-moon-fill', 'bi-sun-fill');
@@ -53,13 +66,27 @@ function initializeTheme() {
 // Toggle theme function
 function toggleTheme() {
     const html = document.documentElement;
+    const body = document.body;
     const themeIcon = document.querySelector('#themeToggle i');
     const currentTheme = html.getAttribute('data-bs-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
     
+    // Update theme
     html.setAttribute('data-bs-theme', newTheme);
+    
+    // Update body classes
+    if (newTheme === 'light') {
+        body.classList.remove('bg-dark');
+        body.classList.add('bg-light');
+    } else {
+        body.classList.remove('bg-light');
+        body.classList.add('bg-dark');
+    }
+    
+    // Store preference
     localStorage.setItem('theme', newTheme);
     
+    // Update icon
     themeIcon.classList.remove('bi-moon-fill', 'bi-sun-fill');
     themeIcon.classList.add(newTheme === 'dark' ? 'bi-moon-fill' : 'bi-sun-fill');
 }

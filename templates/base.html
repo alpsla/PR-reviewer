@@ -20,11 +20,17 @@
             --card-bg: #1F2937;
         }
 
+        [data-bs-theme="light"] {
+            --dark-bg: #ffffff;
+            --card-bg: #f8f9fa;
+        }
+
         body {
             background-color: var(--dark-bg);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            transition: background-color 0.3s ease;
         }
 
         .navbar {
@@ -37,10 +43,12 @@
             padding: 0.5rem;
             color: var(--primary-color);
             border-radius: 0.5rem;
+            transition: all 0.2s ease;
         }
 
         .btn-icon:hover {
             background-color: rgba(96, 165, 250, 0.1);
+            transform: scale(1.05);
         }
 
         .brand-text {
@@ -70,6 +78,11 @@
         .card {
             background-color: var(--card-bg);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: border-color 0.3s ease;
+        }
+
+        [data-bs-theme="light"] .card {
+            border-color: rgba(0, 0, 0, 0.1);
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -105,11 +118,6 @@
                     </span>
                 </div>
 
-                <!-- Mobile Menu Button -->
-                <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-                    <i class="bi bi-list text-light"></i>
-                </button>
-
                 <!-- Navigation -->
                 <div class="collapse navbar-collapse" id="navbarContent">
                     <div class="d-md-none">
@@ -133,6 +141,10 @@
                     </button>
                     <button class="btn btn-icon">
                         <i class="bi bi-person-fill"></i>
+                    </button>
+                    <!-- Move mobile menu button here -->
+                    <button class="navbar-toggler d-md-none ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                        <i class="bi bi-list text-light"></i>
                     </button>
                 </div>
             </div>
