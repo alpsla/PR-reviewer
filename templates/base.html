@@ -4,48 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PR Review Assistant</title>
+    
+    <!-- Favicon configuration -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+    
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
-        .mobile-logo-container {
-            position: relative;
-            width: 32px;
-            height: 32px;
-            min-width: 32px;
-            margin-right: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        :root {
+            --primary-color: #60A5FA;
+            --dark-bg: #111827;
+            --card-bg: #1F2937;
         }
 
-        .mobile-logo-container img {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            transition: opacity 0.3s ease-in-out;
+        .logo-svg {
+            transition: transform 0.3s ease;
         }
 
-        .brand-text {
-            display: flex;
-            align-items: center;
-            white-space: nowrap;
+        .navbar-brand:hover .logo-svg {
+            transform: scale(1.1);
         }
 
-        .brand-text span {
-            transition: all 0.3s ease-in-out;
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        @media (max-width: 768px) {
-            .navbar-brand {
-                padding: 0.5rem 0;
-                display: flex;
-                align-items: center;
+        @media (max-width: 640px) {
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
             }
-            
-            .brand-text {
-                font-size: 1.25rem;
+        }
+
+        @media (min-width: 641px) and (max-width: 1023px) {
+            .container {
+                max-width: 768px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 1024px;
             }
         }
     </style>
@@ -55,55 +59,15 @@
     <nav class="navbar navbar-expand-lg mb-4">
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center" href="/">
-                <!-- Desktop Logos -->
-                <div class="d-none d-md-flex align-items-center">
-                    <img src="{{ url_for('static', filename='images/qa-shield-logo.svg') }}" 
-                         alt="QA Shield Logo"
-                         width="32" 
-                         height="32" 
-                         class="logo-standard me-2"
-                         aria-hidden="true">
-                    <img src="{{ url_for('static', filename='images/qa-shield-logo-alt.svg') }}" 
-                         alt="QA Shield Alternative Logo"
-                         width="32" 
-                         height="32" 
-                         class="logo-alt me-2 d-none"
-                         aria-hidden="true">
-                    <img src="{{ url_for('static', filename='images/qa-shield-logo-hex.svg') }}" 
-                         alt="QA Shield Hex Logo"
-                         width="32" 
-                         height="32" 
-                         class="logo-hex me-2 d-none"
-                         aria-hidden="true">
-                    <img src="{{ url_for('static', filename='images/qa-shield-logo-circuit.svg') }}" 
-                         alt="QA Shield Circuit Logo"
-                         width="32" 
-                         height="32" 
-                         class="logo-circuit me-2 d-none"
-                         aria-hidden="true">
-                </div>
-                
-                <!-- Mobile Logos -->
-                <div class="d-md-none mobile-logo-container">
-                    <img src="{{ url_for('static', filename='images/pr-review-logo.svg') }}" 
-                         alt="PR Review Logo"
-                         class="logo-mobile"
-                         aria-hidden="true">
-                    <img src="{{ url_for('static', filename='images/pr-review-logo-alt.svg') }}" 
-                         alt="PR Review Alternative Logo"
-                         class="logo-mobile-alt d-none"
-                         aria-hidden="true">
-                    <img src="{{ url_for('static', filename='images/pr-review-logo-modern.svg') }}" 
-                         alt="PR Review Modern Logo"
-                         class="logo-mobile-modern d-none"
-                         aria-hidden="true">
-                </div>
-                
-                <!-- Brand Text -->
-                <div class="brand-text fw-bold text-light">
-                    <span class="d-none d-md-inline">PR Review Assistant</span>
-                    <span class="d-md-none">PR Review</span>
-                </div>
+                <svg viewBox="0 0 32 32" class="logo-svg" width="32" height="32">
+                    <circle cx="16" cy="15" r="11" fill="none" stroke="#60A5FA" stroke-width="2.5"/>
+                    <path d="M22 21 L25 24" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M11 15 L15 19 L21 13" fill="none" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+                <span class="ms-2 brand-text fw-bold text-light">
+                    <span class="d-none d-sm-inline">PR Review Assistant</span>
+                    <span class="d-sm-none">PR Review</span>
+                </span>
             </a>
         </div>
     </nav>
@@ -129,34 +93,6 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    {% block extra_js %}
-    <script>
-        // Logo rotation functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const desktopLogos = ['.logo-standard', '.logo-alt', '.logo-hex', '.logo-circuit'];
-            const mobileLogos = ['.logo-mobile', '.logo-mobile-alt', '.logo-mobile-modern'];
-            let currentDesktopLogo = 0;
-            let currentMobileLogo = 0;
-
-            // Rotate desktop logos every 5 seconds
-            setInterval(() => {
-                desktopLogos.forEach(logo => 
-                    document.querySelector(logo)?.classList.add('d-none'));
-                document.querySelector(desktopLogos[currentDesktopLogo])
-                    ?.classList.remove('d-none');
-                currentDesktopLogo = (currentDesktopLogo + 1) % desktopLogos.length;
-            }, 5000);
-
-            // Rotate mobile logos every 4 seconds
-            setInterval(() => {
-                mobileLogos.forEach(logo => 
-                    document.querySelector(logo)?.classList.add('d-none'));
-                document.querySelector(mobileLogos[currentMobileLogo])
-                    ?.classList.remove('d-none');
-                currentMobileLogo = (currentMobileLogo + 1) % mobileLogos.length;
-            }, 4000);
-        });
-    </script>
-    {% endblock %}
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

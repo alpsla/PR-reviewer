@@ -48,3 +48,5 @@ psycopg2-binary
 gunicorn==21.2.0
 gunicorn
 flask-cors
+cairosvg
+pillow

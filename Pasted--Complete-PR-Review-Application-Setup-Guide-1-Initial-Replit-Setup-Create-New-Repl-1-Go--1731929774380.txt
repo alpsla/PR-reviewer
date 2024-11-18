@@ -1,0 +1,294 @@
+# Complete PR Review Application Setup Guide
+
+## 1. Initial Replit Setup
+
+### Create New Repl
+1. Go to replit.com
+2. Click "Create Repl"
+3. Choose "React" template
+4. Name it "pr-review-assistant"
+
+### Install Dependencies
+```bash
+npm install @tailwindcss/forms lucide-react @headlessui/react sharp
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+mkdir -p public src/components/layout src/styles
+```
+
+## 2. Base Configuration Files
+
+### tailwind.config.js
+```javascript
+module.exports = {
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      screens: {
+        'xs': '375px',
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+      },
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
+      },
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+        },
+      },
+    },
+  },
+  plugins: [
+    require('@tailwindcss/forms'),
+  ],
+}
+```
+
+### public/index.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    
+    <title>PR Review Assistant</title>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+```
+
+### src/styles/index.css
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .mobile-nav-item {
+    @apply block px-3 py-2 rounded-md text-base font-medium w-full text-left;
+  }
+
+  .desktop-nav-item {
+    @apply px-3 py-2 rounded-md text-sm font-medium;
+  }
+
+  .input-primary {
+    @apply w-full px-3 sm:px-4 py-2 rounded-md border focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+
+  .button-primary {
+    @apply w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors;
+  }
+}
+```
+
+## 3. Logo and Favicon Setup
+
+### public/favicon.svg
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <circle cx="16" cy="15" r="11" fill="none" stroke="#4A90E2" stroke-width="2.5"/>
+  <path d="M22 21 L25 24" stroke="#4A90E2" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M11 15 L15 19 L21 13" fill="none" stroke="#4A90E2" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
+```
+
+### public/site.webmanifest
+```json
+{
+  "name": "PR Review Assistant",
+  "short_name": "PR Review",
+  "icons": [
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#4A90E2",
+  "background_color": "#FFFFFF",
+  "display": "standalone"
+}
+```
+
+### scripts/generate-favicons.js
+```javascript
+const sharp = require('sharp');
+const fs = require('fs').promises;
+
+async function generateFavicons() {
+  const svg = await fs.readFile('public/favicon.svg', 'utf8');
+  const sizes = [16, 32, 180];
+  
+  for (const size of sizes) {
+    await sharp(Buffer.from(svg))
+      .resize(size, size)
+      .png()
+      .toFile(`public/favicon-${size}x${size}.png`);
+  }
+  
+  await fs.rename(
+    'public/favicon-180x180.png',
+    'public/apple-touch-icon.png'
+  );
+}
+
+generateFavicons().catch(console.error);
+```
+
+## 4. React Components
+
+### src/components/layout/Logo.jsx
+```jsx
+import React from 'react';
+
+export default function Logo({ isDarkMode, className = '' }) {
+  return (
+    <div className={`flex items-center ${className}`}>
+      <svg viewBox="0 0 32 32" className="w-8 h-8 sm:w-10 sm:h-10">
+        <circle 
+          cx="16" 
+          cy="15" 
+          r="11" 
+          fill="none" 
+          stroke={isDarkMode ? "#60A5FA" : "#4A90E2"} 
+          strokeWidth="2.5"
+        />
+        <path 
+          d="M22 21 L25 24" 
+          stroke={isDarkMode ? "#60A5FA" : "#4A90E2"} 
+          strokeWidth="2.5" 
+          strokeLinecap="round"
+        />
+        <path 
+          d="M11 15 L15 19 L21 13" 
+          fill="none" 
+          stroke={isDarkMode ? "#60A5FA" : "#4A90E2"} 
+          strokeWidth="2.5" 
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="ml-2 text-lg sm:text-xl font-semibold hidden sm:block">
+        PR Review Assistant
+      </span>
+    </div>
+  );
+}
+```
+
+[Previous components remain the same - MobileMenu.jsx, Navigation.jsx, Header.jsx, PRSubmissionForm.jsx, Footer.jsx, and App.jsx]
+
+## 5. Build and Run
+
+1. Generate favicons:
+```bash
+node scripts/generate-favicons.js
+```
+
+2. Update index.js to import styles:
+```jsx
+import './styles/index.css';
+import App from './App';
+// ... rest of the file
+```
+
+3. Click "Run" in Replit
+
+## 6. Responsive Design Testing
+
+### Verify across breakpoints:
+- Mobile (<640px)
+  - Hamburger menu
+  - Stacked layout
+  - Full-width components
+  
+- Tablet (640px - 1023px)
+  - Semi-expanded navigation
+  - Balanced layouts
+  - Visible logo text
+  
+- Desktop (≥1024px)
+  - Full navigation
+  - Optimal content width
+  - Enhanced spacing
+
+### Test specific features:
+1. Dark mode toggle
+2. Mobile menu
+3. Form responsiveness
+4. Logo/favicon display
+5. Touch targets on mobile
+
+## 7. Troubleshooting Common Issues
+
+### Favicon not showing
+- Verify all favicon files generated
+- Check path in index.html
+- Clear browser cache
+
+### Responsive issues
+- Check Tailwind classes
+- Verify breakpoint syntax
+- Test on real devices
+
+### Dark mode problems
+- Verify state management
+- Check color classes
+- Test mode persistence
+
+## 8. Next Steps
+
+1. Add features:
+   - Authentication
+   - PR analysis
+   - History tracking
+   - User settings
+
+2. Enhance UX:
+   - Loading states
+   - Error handling
+   - Animations
+   - Feedback messages
+
+3. Optimize:
+   - Image loading
+   - Component splitting
+   - Performance monitoring
+
+Would you like me to:
+1. Add implementation for any specific feature?
+2. Provide more detailed component breakdowns?
+3. Include additional responsive scenarios?
+4. Add animation examples?
