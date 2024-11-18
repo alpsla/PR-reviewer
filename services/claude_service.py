@@ -1,5 +1,5 @@
 import anthropic
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 import logging
 import json
 
@@ -64,19 +64,11 @@ class ClaudeService:
             logger.error(f"Claude API error: {str(e)}")
             error_msg = f"API Error: {str(e)}"
             return self.mock_review(context, error_msg)
-        except anthropic.APIConnectionError as e:
-            logger.error(f"Claude API connection error: {str(e)}")
-            error_msg = f"Connection Error: {str(e)}"
-            return self.mock_review(context, error_msg)
-        except anthropic.APITimeoutError as e:
-            logger.error(f"Claude API timeout: {str(e)}")
-            error_msg = "Request timed out"
-            return self.mock_review(context, error_msg)
         except Exception as e:
             logger.error(f"Unexpected error during PR analysis: {str(e)}")
             error_msg = f"Unexpected error: {str(e)}"
             return self.mock_review(context, error_msg)
-    
+
     def mock_review(self, context: Dict, mock_reason: str = "APIUnavailable") -> Dict:
         """Generate a detailed mock review response with error context"""
         logger.info(f"Generating mock review. Reason: {mock_reason}")
@@ -199,7 +191,7 @@ class ClaudeService:
         files = context.get('files', [])
         comments = context.get('comments', [])
 
-        prompt = f"""Please review this pull request and provide detailed feedback using HTML formatting with Bootstrap classes:
+        prompt = f"""Please analyze this pull request and format the response with HTML and Bootstrap:
 
 PR Details:
 Title: {pr_data['title']}
@@ -216,14 +208,14 @@ Modified Files:
 Discussion Context:
 {self._format_comments(comments)}
 
-Please analyze and format your response with proper HTML structure using Bootstrap classes and icons:
+Format your response with proper HTML structure using Bootstrap classes and icons:
 1. Code quality and best practices (use bi-check-circle for good practices, bi-exclamation-triangle for warnings)
 2. Potential issues or bugs (use bi-exclamation-circle for issues)
 3. Security considerations (use bi-shield-exclamation for security warnings)
 4. Performance implications (use bi-speedometer2 and related icons)
 5. Suggested improvements (use appropriate icons for each suggestion)
 
-Format each section using Bootstrap cards and proper semantic HTML."""
+Use Bootstrap cards and semantic HTML for each section."""
         
         return prompt
     
@@ -251,7 +243,7 @@ Format each section using Bootstrap cards and proper semantic HTML."""
             for comment in comments[:5]
         ])
     
-    def _parse_claude_response(self, response: Union[Dict, any]) -> Dict:
+    def _parse_claude_response(self, response: Any) -> Dict:
         """Parses Claude's response with enhanced validation and error handling"""
         try:
             if not response:
@@ -259,9 +251,11 @@ Format each section using Bootstrap cards and proper semantic HTML."""
                 raise ValueError("Empty response from Claude")
             
             # Extract content from response based on Anthropic SDK v0.3+
-            if hasattr(response, 'content'):
-                # Handle list of content blocks
-                content = response.content[0].text if isinstance(response.content, list) else response.content
+            if hasattr(response, 'content') and isinstance(response.content, (list, str)):
+                if isinstance(response.content, list) and len(response.content) > 0:
+                    content = response.content[0].text
+                else:
+                    content = str(response.content)
             else:
                 # Fallback for other response structures
                 content = response.get('content', '') if isinstance(response, dict) else str(response)
