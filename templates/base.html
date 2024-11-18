@@ -34,10 +34,11 @@
 
         body {
             background-color: var(--dark-bg);
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             flex-direction: column;
             transition: background-color 0.3s ease;
+            overflow: hidden;
         }
 
         .navbar {
@@ -122,6 +123,23 @@
         [data-bs-theme="light"] .card {
             border-color: rgba(0, 0, 0, 0.1);
         }
+
+        footer {
+            padding: 1rem 0;
+            border-top: 1px solid rgba(156, 163, 175, 0.2);
+        }
+
+        footer .text-muted {
+            color: var(--text-secondary) !important;
+        }
+
+        [data-bs-theme="light"] footer .text-muted {
+            color: #6B7280 !important;
+        }
+
+        [data-bs-theme="dark"] footer .text-muted {
+            color: #9CA3AF !important;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -179,9 +197,8 @@
         </div>
     </nav>
 
-    <div class="d-flex flex-column min-vh-100">
-        <!-- Add flex-grow-1 to main content -->
-        <main class="flex-grow-1 container">
+    <div class="d-flex flex-column vh-100">
+        <main class="flex-grow-1 container d-flex align-items-center">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
@@ -198,8 +215,8 @@
                 {% endif %}
             {% endwith %}
 
-            <div class="row min-vh-100">
-                <div class="col-md-6 m-auto">
+            <div class="row w-100">
+                <div class="col-md-6 mx-auto">
                     {% block content %}{% endblock %}
                 </div>
             </div>
