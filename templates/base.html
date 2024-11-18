@@ -56,8 +56,15 @@
             border-color: rgba(229, 231, 235, 0.5);
         }
 
+        .navbar .d-none.d-md-flex {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
         .btn-link {
             color: var(--text-secondary) !important;
+            transition: color 0.2s ease;
         }
 
         .btn-link:hover {
@@ -114,39 +121,6 @@
 
         [data-bs-theme="light"] .card {
             border-color: rgba(0, 0, 0, 0.1);
-        }
-
-        main {
-            margin-top: 4rem;
-        }
-
-        .main-content-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-            padding: 2rem;
-        }
-
-        .card-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .card {
-            flex: 1 0 25%;
-            min-width: 250px;
-        }
-
-        @media (max-width: 768px) {
-            .card {
-                flex: 1 0 50%;
-                min-width: 150px;
-            }
-        }
-
-        .card-body {
-            padding: 1.5rem;
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -206,7 +180,8 @@
     </nav>
 
     <div class="d-flex flex-column min-vh-100">
-        <main class="flex-grow-1 container py-5" style="margin-top: 4rem;">
+        <!-- Add flex-grow-1 to main content -->
+        <main class="flex-grow-1 container">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
@@ -223,12 +198,14 @@
                 {% endif %}
             {% endwith %}
 
-            <div class="main-content-wrapper">
-                {% block content %}{% endblock %}
+            <div class="row min-vh-100">
+                <div class="col-md-6 m-auto">
+                    {% block content %}{% endblock %}
+                </div>
             </div>
         </main>
 
-        <footer class="py-4 border-top mt-auto">
+        <footer class="py-4 border-top">
             <div class="container text-center">
                 <p class="text-muted mb-0">© 2024 PR Review Assistant. All rights reserved.</p>
             </div>
