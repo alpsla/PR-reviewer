@@ -23,11 +23,14 @@
         body {
             background-color: var(--dark-bg);
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         .navbar {
             backdrop-filter: blur(8px);
-            background-color: rgba(31, 41, 55, 0.8);
+            background-color: rgba(31, 41, 55, 0.95);
+            z-index: 1030;
         }
 
         .btn-icon {
@@ -48,6 +51,9 @@
         @media (max-width: 767px) {
             .brand-text {
                 font-size: 1.1rem;
+            }
+            main {
+                margin-top: 3.5rem !important;
             }
         }
 
@@ -95,7 +101,7 @@
                     </svg>
                     <span class="brand-text fw-semibold">
                         <span class="d-none d-md-inline">PR Review Assistant</span>
-                        <span class="d-md-none">PR Review</span>
+                        <span class="d-inline d-md-none">PR Review</span>
                     </span>
                 </div>
 
@@ -119,25 +125,35 @@
         </div>
     </nav>
 
-    <main class="container py-5 mt-5">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
-                        {% if category == 'error' %}
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        {% elif category == 'success' %}
-                            <i class="bi bi-check-circle-fill me-2"></i>
-                        {% endif %}
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    <div class="d-flex flex-column min-vh-100">
+        <!-- Add padding-top to account for fixed navbar -->
+        <main class="flex-grow-1 container py-5" style="margin-top: 4rem;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                            {% if category == 'error' %}
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            {% elif category == 'success' %}
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                            {% endif %}
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
 
-        {% block content %}{% endblock %}
-    </main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Add footer -->
+        <footer class="py-4 bg-gray-800 border-top border-gray-700 mt-auto">
+            <div class="container text-center">
+                <p class="text-muted mb-0">© 2024 PR Review Assistant. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}
