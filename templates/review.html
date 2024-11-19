@@ -60,12 +60,6 @@
 
 {% block extra_css %}
 <style>
-    /* Ensure text visibility in light mode */
-    [data-bs-theme="light"] {
-        --text-primary: #111827;
-        --text-secondary: #4B5563;
-    }
-
     /* Review section title styling */
     .review-section h3 {
         background-color: rgba(59, 130, 246, 0.1);
@@ -73,14 +67,17 @@
         border-radius: 0.5rem;
         margin-bottom: 1rem;
         font-weight: 600;
+        color: var(--text-primary) !important;
     }
 
     [data-bs-theme="light"] .review-section h3 {
-        color: #1F2937 !important;  /* Dark text for light mode */
+        background-color: rgba(37, 99, 235, 0.1);
+        color: #1F2937 !important;
     }
 
     [data-bs-theme="dark"] .review-section h3 {
-        color: #F9FAFB !important;  /* Light text for dark mode */
+        background-color: rgba(59, 130, 246, 0.2);
+        color: #F9FAFB !important;
     }
 
     /* Strengthen selectors for text colors */
