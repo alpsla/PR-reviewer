@@ -41,11 +41,8 @@
                         {% endif %}
                     </small>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-success" onclick="saveReview()">
-                            <i class="bi bi-save me-2"></i>Save
-                        </button>
-                        <button type="button" class="btn btn-primary" onclick="postComment()">
-                            <i class="bi bi-chat-text me-2"></i>Comment
+                        <button type="button" class="btn btn-primary" onclick="showExportModal()">
+                            <i class="bi bi-box-arrow-up me-2"></i>Export Report
                         </button>
                     </div>
                 </div>
@@ -55,6 +52,53 @@
         <a href="{{ url_for('index') }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left me-2"></i>Review Another PR
         </a>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Export Review Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-grid gap-3">
+                    <button class="btn btn-outline-primary d-flex align-items-center p-3" onclick="copyToClipboard()">
+                        <i class="bi bi-clipboard me-3 fs-4"></i>
+                        <div class="text-start">
+                            <div class="fw-semibold">Copy to Clipboard</div>
+                            <small class="text-muted">Copy formatted report for pasting</small>
+                        </div>
+                    </button>
+                    
+                    <button class="btn btn-outline-primary d-flex align-items-center p-3" onclick="downloadMarkdown()">
+                        <i class="bi bi-download me-3 fs-4"></i>
+                        <div class="text-start">
+                            <div class="fw-semibold">Download as Markdown</div>
+                            <small class="text-muted">Save report to your device</small>
+                        </div>
+                    </button>
+                    
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <h6 class="card-title">Want to comment on GitHub?</h6>
+                            <ol class="ps-3 mb-0">
+                                <li>
+                                    <a href="{{ pr_url }}" target="_blank" class="text-primary d-inline-flex align-items-center">
+                                        Open PR in GitHub
+                                        <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                </li>
+                                <li>Copy review feedback (from above)</li>
+                                <li>Paste into GitHub PR comment</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -152,6 +196,27 @@
 
     .btn:active {
         transform: translateY(1px);
+    }
+
+    /* Modal styling */
+    .modal-content {
+        background-color: var(--card-bg);
+        border: 1px solid rgba(156, 163, 175, 0.2);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(156, 163, 175, 0.2);
+    }
+
+    .btn-outline-primary {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    .btn-outline-primary:hover {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: #ffffff;
     }
 </style>
 {% endblock %}

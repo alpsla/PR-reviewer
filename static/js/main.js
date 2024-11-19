@@ -97,6 +97,43 @@ function toggleTheme() {
     localStorage.setItem('theme', newTheme);
 }
 
+// Show export modal
+function showExportModal() {
+    const modal = new bootstrap.Modal(document.getElementById('exportModal'));
+    modal.show();
+}
+
+// Copy to clipboard function
+async function copyToClipboard() {
+    const reviewContent = document.querySelector('.review-content')?.innerText;
+    if (!reviewContent) return;
+    
+    try {
+        await navigator.clipboard.writeText(reviewContent);
+        showAlert('Review copied to clipboard!', 'success');
+    } catch (error) {
+        showAlert('Failed to copy: ' + error.message, 'error');
+    }
+}
+
+// Download as markdown function
+function downloadMarkdown() {
+    const reviewContent = document.querySelector('.review-content')?.innerText;
+    if (!reviewContent) return;
+    
+    const blob = new Blob([reviewContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pr-review.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showAlert('Review downloaded as Markdown!', 'success');
+}
+
 // Save review function with clipboard functionality
 async function saveReview() {
     const saveBtn = document.querySelector('.btn-success');
