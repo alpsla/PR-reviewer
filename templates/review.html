@@ -60,6 +60,37 @@
 
 {% block extra_css %}
 <style>
+    /* Ensure text visibility in light mode */
+    [data-bs-theme="light"] {
+        --text-primary: #111827;
+        --text-secondary: #4B5563;
+    }
+
+    /* Strengthen selectors for text colors */
+    [data-bs-theme="light"] .review-section li,
+    [data-bs-theme="light"] .review-content,
+    [data-bs-theme="light"] .review-section,
+    [data-bs-theme="light"] .review-section h3,
+    [data-bs-theme="light"] .review-section h4,
+    [data-bs-theme="light"] .review-section p {
+        color: var(--text-primary) !important;
+    }
+
+    [data-bs-theme="light"] .text-muted,
+    [data-bs-theme="light"] .review-section .text-muted {
+        color: var(--text-secondary) !important;
+    }
+
+    /* Ensure icon colors remain visible */
+    .review-section .bi-check-circle { color: #10B981 !important; }
+    .review-section .bi-exclamation-triangle { color: #F59E0B !important; }
+    .review-section .bi-exclamation-circle { color: #EF4444 !important; }
+    .review-section .bi-shield-exclamation { color: #8B5CF6 !important; }
+    .review-section .bi-speedometer2 { color: #3B82F6 !important; }
+    .review-section .bi-lightning-charge { color: #F59E0B !important; }
+    .review-section .bi-graph-up { color: #10B981 !important; }
+    .review-section .bi-database-check { color: #6366F1 !important; }
+
     .review-section h3 {
         background-color: rgba(59, 130, 246, 0.1);
         padding: 0.75rem 1rem;
@@ -69,33 +100,18 @@
         font-weight: 600;
     }
 
-    [data-bs-theme="light"] .review-section h3 {
-        background-color: rgba(37, 99, 235, 0.1);
-        color: var(--primary-color);
-    }
-
     .review-section .bi {
+        display: inline-block;
         font-size: 1.25rem;
         margin-right: 0.75rem;
         vertical-align: -0.125rem;
     }
-
-    /* Update icon colors */
-    .review-section .bi-check-circle { color: #10B981; }
-    .review-section .bi-exclamation-triangle { color: #F59E0B; }
-    .review-section .bi-exclamation-circle { color: #EF4444; }
-    .review-section .bi-shield-exclamation { color: #8B5CF6; }
-    .review-section .bi-speedometer2 { color: #3B82F6; }
-    .review-section .bi-lightning-charge { color: #F59E0B; }
-    .review-section .bi-graph-up { color: #10B981; }
-    .review-section .bi-database-check { color: #6366F1; }
 
     /* List item styling */
     .review-section li {
         display: flex;
         align-items: center;
         margin-bottom: 0.5rem;
-        color: var(--text-primary);
     }
 
     /* Card styling */
@@ -110,11 +126,6 @@
         border-top: 1px solid rgba(156, 163, 175, 0.2);
     }
 
-    [data-bs-theme="light"] .card-footer {
-        background-color: var(--card-bg);
-        border-color: rgba(0, 0, 0, 0.1);
-    }
-
     /* Button styling */
     .btn-success, .btn-primary {
         background-color: var(--primary-color);
@@ -126,17 +137,6 @@
         background-color: var(--primary-hover);
         border-color: var(--primary-hover);
         color: #ffffff;
-    }
-
-    /* Additional styles for better theme support */
-    [data-bs-theme="light"] .review-section li,
-    [data-bs-theme="light"] .review-content,
-    [data-bs-theme="light"] .review-section {
-        color: var(--text-primary) !important;
-    }
-
-    [data-bs-theme="light"] .text-muted {
-        color: var(--text-secondary) !important;
     }
 
     .review-section {
