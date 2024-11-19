@@ -10,6 +10,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+from services.dependency_service import DependencyService
+
 class ClaudeService:
     def __init__(self, api_key: str):
         """Initialize Claude service with proper error handling"""
@@ -28,6 +30,7 @@ class ClaudeService:
                     "X-Client-Version": "1.0.0"
                 }
             )
+            self.dependency_service = DependencyService()
             logger.info("Claude API client initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize Claude API client: {str(e)}")
@@ -42,6 +45,12 @@ class ClaudeService:
             return self.mock_review(context, mock_reason)
             
         try:
+            # Add dependency analysis
+            if 'files' in context:
+                logger.info("Running dependency analysis")
+                dependency_analysis = self.dependency_service.analyze_dependencies(context['files'])
+                context['dependency_analysis'] = dependency_analysis
+            
             logger.info("Building analysis prompt")
             prompt = self._build_analysis_prompt(context)
             
@@ -68,7 +77,7 @@ class ClaudeService:
             logger.error(f"Unexpected error during PR analysis: {str(e)}")
             error_msg = f"Unexpected error: {str(e)}"
             return self.mock_review(context, error_msg)
-
+    
     def mock_review(self, context: Dict, mock_reason: str = "APIUnavailable") -> Dict:
         """Generate a detailed mock review response with error context"""
         logger.info(f"Generating mock review. Reason: {mock_reason}")
@@ -111,6 +120,20 @@ class ClaudeService:
                 <li><i class="bi bi-exclamation-triangle text-warning"></i> Consider adding more documentation for complex logic</li>
                 <li><i class="bi bi-check-circle text-success"></i> Variable naming is consistent</li>
                 <li><i class="bi bi-exclamation-triangle text-warning"></i> File organization could be improved</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="review-section">
+    <h3>Dependencies and Architecture</h3>
+    <div class="card mb-3">
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li><i class="bi bi-diagram-2"></i> Module dependencies are well-structured</li>
+                <li><i class="bi bi-exclamation-triangle text-warning"></i> Consider refactoring circular dependencies</li>
+                <li><i class="bi bi-box-seam"></i> External dependencies are properly managed</li>
+                <li><i class="bi bi-arrows-angle-contract"></i> Module coupling is reasonable</li>
             </ul>
         </div>
     </div>
@@ -173,7 +196,7 @@ class ClaudeService:
 </div>
 
 <div class="alert alert-warning mt-3">
-    <i class="bi bi-info-circle"></i> Note: This is a mock review generated for testing purposes. 
+    <i class="bi bi-info-circle me-2"></i> Note: This is a mock review generated for testing purposes. 
     <br>Reason: {mock_reason}
 </div>"""
 
@@ -189,6 +212,7 @@ class ClaudeService:
         pr_data = context['pr_data']
         files = context.get('files', [])
         comments = context.get('comments', [])
+        dependency_analysis = context.get('dependency_analysis', {})
 
         prompt = f"""PR Details:
 Title: {pr_data['title']}
@@ -205,24 +229,31 @@ Modified Files:
 Discussion Context:
 {self._format_comments(comments)}
 
+Dependency Analysis:
+{self._format_dependency_analysis(dependency_analysis)}
+
 Structure your response using HTML with Bootstrap classes:
 1. Use .review-section for main sections
 2. Wrap content in .card and .card-body
-3. Include Bootstrap Icons:
-   - bi-check-circle (text-success) for good practices
-   - bi-exclamation-triangle (text-warning) for warnings
-   - bi-exclamation-circle for issues
-   - bi-shield-exclamation for security warnings
-   - bi-speedometer2 for performance metrics
-4. Organize content into sections:
+3. Use <ul class="list-unstyled mb-0"> for lists
+4. Place icons before text content in list items:
+   <li><i class="bi bi-[icon-name] [text-color]"></i> Content</li>
+5. Use these icons consistently:
+   - bi-check-circle text-success (for good practices)
+   - bi-exclamation-triangle text-warning (for warnings)
+   - bi-exclamation-circle (for issues)
+   - bi-shield-exclamation (for security warnings)
+   - bi-speedometer2 (for performance metrics)
+6. Organize content into sections:
    - Code Quality and Best Practices
+   - Dependencies and Architecture
    - Potential Issues
    - Security Considerations
    - Performance Implications
    - Suggested Improvements"""
         
         return prompt
-    
+
     def _format_files(self, files: list) -> str:
         """Formats the files list with detailed changes"""
         if not files:
@@ -241,11 +272,35 @@ Structure your response using HTML with Bootstrap classes:
             return "No previous discussion found"
             
         return "Previous Discussion:\n" + "\n".join([
-            f"- {comment['user']}: {comment['body'][:200]}..."
-            if len(comment['body']) > 200 else
             f"- {comment['user']}: {comment['body']}"
             for comment in comments[:5]
         ])
+    
+    def _format_dependency_analysis(self, analysis: Dict) -> str:
+        """Format dependency analysis results"""
+        if not analysis or analysis.get('error'):
+            return "Dependency analysis not available"
+            
+        circular_deps = analysis.get('circular_dependencies', [])
+        external_deps = analysis.get('external_dependencies', [])
+        
+        formatted = "Dependency Analysis Results:\n"
+        
+        if circular_deps:
+            formatted += "\nCircular Dependencies Found:\n"
+            for cycle in circular_deps:
+                formatted += f"- {' -> '.join(cycle)}\n"
+        else:
+            formatted += "\nNo circular dependencies found.\n"
+            
+        if external_deps:
+            formatted += "\nExternal Dependencies:\n"
+            for dep in external_deps:
+                formatted += f"- {dep['module']} depends on {dep['depends_on']}\n"
+        else:
+            formatted += "\nNo external dependencies found.\n"
+            
+        return formatted
     
     def _parse_claude_response(self, response: Any) -> Dict:
         """Parses Claude's response with enhanced validation and error handling"""
