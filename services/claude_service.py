@@ -206,14 +206,24 @@ Modified Files:
 Discussion Context:
 {self._format_comments(comments)}
 
-Format your response with proper HTML structure using Bootstrap classes and icons:
-1. Code quality and best practices (use bi-check-circle for good practices, bi-exclamation-triangle for warnings)
-2. Potential issues or bugs (use bi-exclamation-circle for issues)
-3. Security considerations (use bi-shield-exclamation for security warnings)
-4. Performance implications (use bi-speedometer2 and related icons)
-5. Suggested improvements (use appropriate icons for each suggestion)
-
-Use Bootstrap cards and semantic HTML for each section."""
+Format your response with these requirements:
+1. Use proper HTML structure with Bootstrap classes
+2. Organize content into sections using .review-section class
+3. Use Bootstrap cards with .card and .card-body classes
+4. Include appropriate Bootstrap Icons:
+   - bi-check-circle (text-success) for good practices
+   - bi-exclamation-triangle (text-warning) for warnings
+   - bi-exclamation-circle for issues
+   - bi-shield-exclamation for security warnings
+   - bi-speedometer2 and related icons for performance
+5. Use semantic HTML with proper heading hierarchy
+6. Maintain consistent spacing with Bootstrap utility classes
+7. Include all key review sections:
+   - Code Quality and Best Practices
+   - Potential Issues
+   - Security Considerations
+   - Performance Implications
+   - Suggested Improvements"""
         
         return prompt
     
