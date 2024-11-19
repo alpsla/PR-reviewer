@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+    <!-- Background circle -->
+    <circle cx="100" cy="100" r="90" fill="#60A5FA" opacity="0.1"/>
+    
+    <!-- Main "Q" circle -->
+    <circle cx="100" cy="95" r="60" fill="none" stroke="#60A5FA" stroke-width="8"/>
+    
+    <!-- Tail of "Q" -->
+    <path d="M130 135 L150 155" stroke="#60A5FA" stroke-width="8" stroke-linecap="round"/>
+    
+    <!-- Checkmark inside -->
+    <path d="M75 95 L95 115 L125 85" fill="none" stroke="#60A5FA" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Small circles representing testing/monitoring -->
+    <circle cx="160" cy="40" r="8" fill="#60A5FA"/>
+    <circle cx="40" cy="160" r="8" fill="#60A5FA"/>
+    <circle cx="40" cy="40" r="8" fill="#60A5FA"/>
+    <circle cx="160" cy="160" r="8" fill="#60A5FA"/>
+</svg>

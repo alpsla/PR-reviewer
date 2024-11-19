@@ -4,38 +4,256 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PR Review Assistant</title>
+    
+    <!-- Favicon configuration -->
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/qa-shield-logo.svg') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+    
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3B82F6;
+            --primary-hover: #2563EB;
+            --dark-bg: #111827;
+            --card-bg: #1F2937;
+            --text-primary: #F9FAFB;
+            --text-secondary: #D1D5DB;
+        }
+
+        [data-bs-theme="light"] {
+            --primary-color: #2563EB;
+            --primary-hover: #1D4ED8;
+            --dark-bg: #ffffff;
+            --card-bg: #f8f9fa;
+            --text-primary: #1F2937;
+            --text-secondary: #4B5563;
+            --tag-bg: #EFF6FF;
+            --tag-text: #1E40AF;
+        }
+
+        [data-bs-theme="light"] body {
+            background-color: var(--dark-bg);
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z' fill='%23f0f0f0' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E");
+            background-blend-mode: soft-light;
+        }
+
+        [data-bs-theme="light"] .navbar {
+            background-color: #f8f9fa;
+            border-bottom-color: #e5e7eb;
+        }
+
+        [data-bs-theme="light"] .card {
+            background-color: #ffffff;
+            border-color: #e5e7eb;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s ease;
+            background-color: var(--dark-bg);
+        }
+
+        /* Main content wrapper */
+        .content-wrapper {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        main {
+            flex: 1 0 auto;
+            padding-bottom: 2rem;
+        }
+
+        .navbar {
+            backdrop-filter: blur(8px);
+            z-index: 1030;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        [data-bs-theme="dark"] .navbar {
+            background-color: rgba(31, 41, 55, 0.95);
+            border-color: rgba(75, 85, 99, 0.5);
+        }
+
+        .navbar .d-none.d-md-flex {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .btn-link {
+            color: var(--text-secondary) !important;
+            transition: color 0.2s ease;
+        }
+
+        .btn-link:hover {
+            color: var(--primary-color) !important;
+        }
+
+        .brand-text {
+            color: var(--primary-color) !important;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .navbar-toggler {
+            color: var(--text-primary);
+        }
+
+        .navbar-collapse {
+            background-color: var(--card-bg);
+        }
+
+        .btn-icon {
+            padding: 0.5rem;
+            color: var(--primary-color);
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-icon:hover {
+            background-color: rgba(96, 165, 250, 0.1);
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 767px) {
+            .brand-text {
+                font-size: 1.1rem;
+            }
+        }
+
+        .logo-svg {
+            width: 32px;
+            height: 32px;
+            transition: transform 0.3s ease;
+        }
+
+        .navbar-brand:hover .logo-svg {
+            transform: scale(1.1);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: border-color 0.3s ease;
+        }
+
+        /* Footer styling */
+        .footer {
+            flex-shrink: 0;
+            width: 100%;
+            background-color: var(--card-bg);
+            border-top: 1px solid rgba(156, 163, 175, 0.2);
+            padding: 1rem 0;
+            margin-top: auto;
+        }
+
+        .footer-content {
+            color: var(--text-primary) !important;
+        }
+
+        [data-bs-theme="light"] .footer-content {
+            color: #1F2937 !important;  /* Darker text for light mode */
+        }
+
+        [data-bs-theme="dark"] .footer-content {
+            color: #F9FAFB !important;  /* Light text for dark mode */
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-git"></i> PR Review Assistant
-            </a>
+    <nav class="navbar navbar-expand-lg fixed-top border-bottom">
+        <div class="container-fluid px-4 py-2">
+            <div class="d-flex justify-content-between w-100">
+                <!-- Logo and Brand -->
+                <div class="d-flex align-items-center">
+                    <svg viewBox="0 0 200 200" class="logo-svg me-3">
+                        <circle cx="100" cy="100" r="90" fill="#60A5FA" opacity="0.1"/>
+                        <circle cx="100" cy="95" r="60" fill="none" stroke="#60A5FA" stroke-width="8"/>
+                        <path d="M130 135 L150 155" stroke="#60A5FA" stroke-width="8" stroke-linecap="round"/>
+                        <path d="M75 95 L95 115 L125 85" fill="none" stroke="#60A5FA" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="160" cy="40" r="8" fill="#60A5FA"/>
+                        <circle cx="40" cy="160" r="8" fill="#60A5FA"/>
+                        <circle cx="40" cy="40" r="8" fill="#60A5FA"/>
+                        <circle cx="160" cy="160" r="8" fill="#60A5FA"/>
+                    </svg>
+                    <span class="brand-text">
+                        <span class="d-none d-md-inline">PR Review Assistant</span>
+                        <span class="d-inline d-md-none">PR Review</span>
+                    </span>
+                </div>
+
+                <!-- Navigation -->
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <div class="d-md-none">
+                        <div class="p-3">
+                            <button class="btn btn-link w-100 text-start">Dashboard</button>
+                            <button class="btn btn-link w-100 text-start">History</button>
+                            <button class="btn btn-link w-100 text-start">Settings</button>
+                        </div>
+                    </div>
+                    <div class="d-none d-md-flex align-items-center">
+                        <button class="btn btn-link">Dashboard</button>
+                        <button class="btn btn-link">History</button>
+                        <button class="btn btn-link">Settings</button>
+                    </div>
+                </div>
+
+                <!-- User Controls -->
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-icon" id="themeToggle" onclick="toggleTheme()">
+                        <i class="bi bi-sun-fill"></i>
+                    </button>
+                    <button class="btn btn-icon">
+                        <i class="bi bi-person-fill"></i>
+                    </button>
+                    <button class="navbar-toggler d-md-none ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                        <i class="bi bi-list"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
-                        {% if category == 'error' %}
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        {% elif category == 'success' %}
-                            <i class="bi bi-check-circle-fill me-2"></i>
+    <div class="content-wrapper">
+        <main class="container py-5 mt-5">
+            <div class="d-flex justify-content-center align-items-center h-100">
+                <div class="w-100">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                                    {% if category == 'error' %}
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    {% elif category == 'success' %}
+                                        <i class="bi bi-check-circle-fill me-2"></i>
+                                    {% endif %}
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
                         {% endif %}
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+                    {% endwith %}
 
-        {% block content %}{% endblock %}
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </main>
+        
+        <footer class="footer mt-auto">
+            <div class="container">
+                <div class="footer-content text-center">
+                    <p class="mb-0">© 2024 PR Review Assistant. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>

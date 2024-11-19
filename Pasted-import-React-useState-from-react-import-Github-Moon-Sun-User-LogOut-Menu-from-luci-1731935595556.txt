@@ -1,0 +1,99 @@
+import React, { useState } from 'react';
+import { Github, Moon, Sun, User, LogOut, Menu } from 'lucide-react';
+
+const PRReviewApp = () => {
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  return (
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Header */}
+      <nav className={`fixed w-full z-50 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b`}>
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between h-16 items-center">
+            {/* Logo and Brand */}
+            <div className="flex items-center space-x-3">
+              <svg viewBox="0 0 32 32" className="w-8 h-8">
+                <circle cx="16" cy="15" r="11" fill="none" stroke={isDarkMode ? "#60A5FA" : "#4A90E2"} strokeWidth="2.5"/>
+                <path d="M22 21 L25 24" stroke={isDarkMode ? "#60A5FA" : "#4A90E2"} strokeWidth="2.5" strokeLinecap="round"/>
+                <path d="M11 15 L15 19 L21 13" fill="none" stroke={isDarkMode ? "#60A5FA" : "#4A90E2"} strokeWidth="2.5" strokeLinecap="round"/>
+              </svg>
+              <span className={`font-semibold text-xl ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>PR Review Assistant</span>
+            </div>
+
+            {/* Navigation */}
+            <div className="hidden md:flex items-center space-x-4">
+              <button className={`px-3 py-2 rounded-md ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                Dashboard
+              </button>
+              <button className={`px-3 py-2 rounded-md ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                History
+              </button>
+              <button className={`px-3 py-2 rounded-md ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                Settings
+              </button>
+            </div>
+
+            {/* Right side controls */}
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className={`p-2 rounded-full ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
+              >
+                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+              <div className={`p-2 rounded-full ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                <User size={20} />
+              </div>
+              <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                <Menu size={24} className={isDarkMode ? 'text-gray-300' : 'text-gray-700'} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="pt-24 pb-8 px-4 max-w-3xl mx-auto">
+        <div className={`rounded-lg p-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+          <h1 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Submit Pull Request
+          </h1>
+          
+          <div className="space-y-6">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                GitHub PR URL
+              </label>
+              <input
+                type="text"
+                placeholder="https://github.com/owner/repo/pull/123"
+                className={`w-full px-4 py-2 rounded-md border ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+              />
+              <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Enter the full URL of the GitHub pull request
+              </p>
+            </div>
+
+            <button className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors">
+              Analyze PR
+            </button>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className={`py-6 ${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
+        <div className="max-w-7xl mx-auto px-4 text-center text-sm">
+          <p>© 2024 PR Review Assistant. All rights reserved.</p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default PRReviewApp;

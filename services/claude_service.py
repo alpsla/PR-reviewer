@@ -1,5 +1,5 @@
 import anthropic
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 import logging
 import json
 
@@ -9,6 +9,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+from services.dependency_service import DependencyService
 
 class ClaudeService:
     def __init__(self, api_key: str):
@@ -28,6 +30,7 @@ class ClaudeService:
                     "X-Client-Version": "1.0.0"
                 }
             )
+            self.dependency_service = DependencyService()
             logger.info("Claude API client initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize Claude API client: {str(e)}")
@@ -42,6 +45,12 @@ class ClaudeService:
             return self.mock_review(context, mock_reason)
             
         try:
+            # Add dependency analysis
+            if 'files' in context:
+                logger.info("Running dependency analysis")
+                dependency_analysis = self.dependency_service.analyze_dependencies(context['files'])
+                context['dependency_analysis'] = dependency_analysis
+            
             logger.info("Building analysis prompt")
             prompt = self._build_analysis_prompt(context)
             
@@ -63,14 +72,6 @@ class ClaudeService:
         except anthropic.APIError as e:
             logger.error(f"Claude API error: {str(e)}")
             error_msg = f"API Error: {str(e)}"
-            return self.mock_review(context, error_msg)
-        except anthropic.APIConnectionError as e:
-            logger.error(f"Claude API connection error: {str(e)}")
-            error_msg = f"Connection Error: {str(e)}"
-            return self.mock_review(context, error_msg)
-        except anthropic.APITimeoutError as e:
-            logger.error(f"Claude API timeout: {str(e)}")
-            error_msg = "Request timed out"
             return self.mock_review(context, error_msg)
         except Exception as e:
             logger.error(f"Unexpected error during PR analysis: {str(e)}")
@@ -95,8 +96,7 @@ class ClaudeService:
             if file_extensions:
                 primary_language = max(file_extensions, key=list(file_extensions).count)
 
-        mock_response = f"""
-<div class="review-section">
+        mock_response = f"""<div class="review-section">
     <h3>Summary of Changes</h3>
     <div class="card mb-3">
         <div class="card-body">
@@ -120,6 +120,20 @@ class ClaudeService:
                 <li><i class="bi bi-exclamation-triangle text-warning"></i> Consider adding more documentation for complex logic</li>
                 <li><i class="bi bi-check-circle text-success"></i> Variable naming is consistent</li>
                 <li><i class="bi bi-exclamation-triangle text-warning"></i> File organization could be improved</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="review-section">
+    <h3>Dependencies and Architecture</h3>
+    <div class="card mb-3">
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li><i class="bi bi-diagram-2"></i> Module dependencies are well-structured</li>
+                <li><i class="bi bi-exclamation-triangle text-warning"></i> Consider refactoring circular dependencies</li>
+                <li><i class="bi bi-box-seam"></i> External dependencies are properly managed</li>
+                <li><i class="bi bi-arrows-angle-contract"></i> Module coupling is reasonable</li>
             </ul>
         </div>
     </div>
@@ -182,7 +196,7 @@ class ClaudeService:
 </div>
 
 <div class="alert alert-warning mt-3">
-    <i class="bi bi-info-circle"></i> Note: This is a mock review generated for testing purposes. 
+    <i class="bi bi-info-circle me-2"></i> Note: This is a mock review generated for testing purposes. 
     <br>Reason: {mock_reason}
 </div>"""
 
@@ -198,10 +212,9 @@ class ClaudeService:
         pr_data = context['pr_data']
         files = context.get('files', [])
         comments = context.get('comments', [])
+        dependency_analysis = context.get('dependency_analysis', {})
 
-        prompt = f"""Please review this pull request and provide detailed feedback using HTML formatting with Bootstrap classes:
-
-PR Details:
+        prompt = f"""PR Details:
 Title: {pr_data['title']}
 Description: {pr_data['body'] or 'No description provided'}
 
@@ -216,17 +229,31 @@ Modified Files:
 Discussion Context:
 {self._format_comments(comments)}
 
-Please analyze and format your response with proper HTML structure using Bootstrap classes and icons:
-1. Code quality and best practices (use bi-check-circle for good practices, bi-exclamation-triangle for warnings)
-2. Potential issues or bugs (use bi-exclamation-circle for issues)
-3. Security considerations (use bi-shield-exclamation for security warnings)
-4. Performance implications (use bi-speedometer2 and related icons)
-5. Suggested improvements (use appropriate icons for each suggestion)
+Dependency Analysis:
+{self._format_dependency_analysis(dependency_analysis)}
 
-Format each section using Bootstrap cards and proper semantic HTML."""
+Structure your response using HTML with Bootstrap classes:
+1. Use .review-section for main sections
+2. Wrap content in .card and .card-body
+3. Use <ul class="list-unstyled mb-0"> for lists
+4. Place icons before text content in list items:
+   <li><i class="bi bi-[icon-name] [text-color]"></i> Content</li>
+5. Use these icons consistently:
+   - bi-check-circle text-success (for good practices)
+   - bi-exclamation-triangle text-warning (for warnings)
+   - bi-exclamation-circle (for issues)
+   - bi-shield-exclamation (for security warnings)
+   - bi-speedometer2 (for performance metrics)
+6. Organize content into sections:
+   - Code Quality and Best Practices
+   - Dependencies and Architecture
+   - Potential Issues
+   - Security Considerations
+   - Performance Implications
+   - Suggested Improvements"""
         
         return prompt
-    
+
     def _format_files(self, files: list) -> str:
         """Formats the files list with detailed changes"""
         if not files:
@@ -245,13 +272,37 @@ Format each section using Bootstrap cards and proper semantic HTML."""
             return "No previous discussion found"
             
         return "Previous Discussion:\n" + "\n".join([
-            f"- {comment['user']}: {comment['body'][:200]}..."
-            if len(comment['body']) > 200 else
             f"- {comment['user']}: {comment['body']}"
             for comment in comments[:5]
         ])
     
-    def _parse_claude_response(self, response: Union[Dict, any]) -> Dict:
+    def _format_dependency_analysis(self, analysis: Dict) -> str:
+        """Format dependency analysis results"""
+        if not analysis or analysis.get('error'):
+            return "Dependency analysis not available"
+            
+        circular_deps = analysis.get('circular_dependencies', [])
+        external_deps = analysis.get('external_dependencies', [])
+        
+        formatted = "Dependency Analysis Results:\n"
+        
+        if circular_deps:
+            formatted += "\nCircular Dependencies Found:\n"
+            for cycle in circular_deps:
+                formatted += f"- {' -> '.join(cycle)}\n"
+        else:
+            formatted += "\nNo circular dependencies found.\n"
+            
+        if external_deps:
+            formatted += "\nExternal Dependencies:\n"
+            for dep in external_deps:
+                formatted += f"- {dep['module']} depends on {dep['depends_on']}\n"
+        else:
+            formatted += "\nNo external dependencies found.\n"
+            
+        return formatted
+    
+    def _parse_claude_response(self, response: Any) -> Dict:
         """Parses Claude's response with enhanced validation and error handling"""
         try:
             if not response:
@@ -259,9 +310,11 @@ Format each section using Bootstrap cards and proper semantic HTML."""
                 raise ValueError("Empty response from Claude")
             
             # Extract content from response based on Anthropic SDK v0.3+
-            if hasattr(response, 'content'):
-                # Handle list of content blocks
-                content = response.content[0].text if isinstance(response.content, list) else response.content
+            if hasattr(response, 'content') and isinstance(response.content, (list, str)):
+                if isinstance(response.content, list) and len(response.content) > 0:
+                    content = response.content[0].text
+                else:
+                    content = str(response.content)
             else:
                 # Fallback for other response structures
                 content = response.get('content', '') if isinstance(response, dict) else str(response)

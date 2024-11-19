@@ -1,27 +1,61 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h4>Submit Pull Request for Review</h4>
+<div class="card border-0 shadow">
+    <div class="card-body p-4">
+        <h4 class="mb-4 fw-bold" style="color: var(--primary-color);">Submit Pull Request</h4>
+        <form action="{{ url_for('review') }}" method="POST" id="prForm">
+            <div class="mb-4">
+                <label for="pr_url" class="form-label" style="color: var(--text-primary);">GitHub PR URL</label>
+                <input type="url" 
+                       class="form-control form-control-lg" 
+                       id="pr_url" 
+                       name="pr_url" 
+                       placeholder="https://github.com/owner/repo/pull/123"
+                       required>
+                <div class="form-text mt-2">Enter the full URL of the GitHub pull request</div>
             </div>
-            <div class="card-body">
-                <form action="{{ url_for('review') }}" method="POST" id="prForm">
-                    <div class="mb-3">
-                        <label for="pr_url" class="form-label">GitHub PR URL</label>
-                        <input type="url" class="form-control" id="pr_url" name="pr_url" 
-                               placeholder="https://github.com/owner/repo/pull/123" required>
-                        <div class="form-text">Enter the full URL of the GitHub pull request</div>
-                    </div>
-                    <button type="submit" class="btn btn-primary" id="submitBtn">
-                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                        Analyze PR
-                    </button>
-                </form>
-            </div>
-        </div>
+            <button type="submit" class="btn btn-primary w-100">
+                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                <span class="button-text">Analyze PR</span>
+            </button>
+        </form>
     </div>
 </div>
+
+<style>
+    .form-control {
+        background-color: var(--card-bg);
+        border: 2px solid rgba(156, 163, 175, 0.3);
+        color: var(--text-primary);
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        background-color: var(--card-bg);
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+        color: var(--text-primary);
+    }
+
+    .form-text {
+        color: var(--text-secondary) !important;
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--primary-hover);
+        border-color: var(--primary-hover);
+        transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+        transform: translateY(1px);
+    }
+</style>
 {% endblock %}
