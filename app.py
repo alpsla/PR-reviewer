@@ -130,8 +130,11 @@ def create_app():
             logger.error(f"Health check failed: {str(e)}")
             return jsonify({"status": "unhealthy", "message": str(e)}), 500
 
-    @app.route('/review', methods=['POST'])
+    @app.route('/review', methods=['GET', 'POST'])
     def review():
+        if request.method == 'GET':
+            return redirect(url_for('index'))
+            
         pr_url = request.form.get('pr_url')
         if not pr_url:
             flash('Please provide a PR URL', 'error')

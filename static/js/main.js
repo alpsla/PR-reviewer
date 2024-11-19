@@ -7,22 +7,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize form handling
 function initializeForm() {
-    const prForm = document.querySelector('#prForm');
+    const prForm = document.getElementById('prForm');
     if (!prForm) {
-        console.debug('PR form not found - likely on a different page');
+        console.debug('No PR form found on current page');
         return;
     }
     
     const submitBtn = prForm.querySelector('button[type="submit"]');
     const spinner = submitBtn?.querySelector('.spinner-border');
+    const buttonText = submitBtn?.querySelector('.button-text');
     
-    if (submitBtn && spinner) {
-        prForm.addEventListener('submit', function() {
+    if (submitBtn && spinner && buttonText) {
+        prForm.addEventListener('submit', function(e) {
             submitBtn.disabled = true;
             spinner.classList.remove('d-none');
-            submitBtn.innerHTML = '';
-            submitBtn.appendChild(spinner);
-            submitBtn.appendChild(document.createTextNode(' Analyzing...'));
+            buttonText.textContent = 'Analyzing...';
         });
     }
 }
