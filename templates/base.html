@@ -160,6 +160,13 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: border-color 0.3s ease;
         }
+
+        footer {
+            position: relative;
+            width: 100%;
+            background-color: var(--card-bg);
+            border-top: 1px solid rgba(156, 163, 175, 0.2);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -218,25 +225,27 @@
     </nav>
 
     <div class="d-flex flex-column min-vh-100">
-        <main class="flex-grow-1 container py-5">
-            <div class="w-100">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
-                                {% if category == 'error' %}
-                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                {% elif category == 'success' %}
-                                    <i class="bi bi-check-circle-fill me-2"></i>
-                                {% endif %}
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
+        <main class="flex-grow-1 container py-5 mt-5">
+            <div class="d-flex justify-content-center align-items-center h-100">
+                <div class="w-100">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                                    {% if category == 'error' %}
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    {% elif category == 'success' %}
+                                        <i class="bi bi-check-circle-fill me-2"></i>
+                                    {% endif %}
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
 
-                {% block content %}{% endblock %}
+                    {% block content %}{% endblock %}
+                </div>
             </div>
         </main>
 
