@@ -66,11 +66,27 @@
         --text-secondary: #4B5563;
     }
 
+    /* Review section title styling */
+    .review-section h3 {
+        background-color: rgba(59, 130, 246, 0.1);
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    [data-bs-theme="light"] .review-section h3 {
+        color: #1F2937 !important;  /* Dark text for light mode */
+    }
+
+    [data-bs-theme="dark"] .review-section h3 {
+        color: #F9FAFB !important;  /* Light text for dark mode */
+    }
+
     /* Strengthen selectors for text colors */
     [data-bs-theme="light"] .review-section li,
     [data-bs-theme="light"] .review-content,
     [data-bs-theme="light"] .review-section,
-    [data-bs-theme="light"] .review-section h3,
     [data-bs-theme="light"] .review-section h4,
     [data-bs-theme="light"] .review-section p {
         color: var(--text-primary) !important;
@@ -90,15 +106,6 @@
     .review-section .bi-lightning-charge { color: #F59E0B !important; }
     .review-section .bi-graph-up { color: #10B981 !important; }
     .review-section .bi-database-check { color: #6366F1 !important; }
-
-    .review-section h3 {
-        background-color: rgba(59, 130, 246, 0.1);
-        padding: 0.75rem 1rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-        color: var(--primary-color);
-        font-weight: 600;
-    }
 
     .review-section .bi {
         display: inline-block;
@@ -139,15 +146,6 @@
         color: #ffffff;
     }
 
-    .review-section {
-        margin-bottom: 1.5rem;
-    }
-
-    .review-section:last-child {
-        margin-bottom: 0;
-    }
-
-    /* Button hover effects */
     .btn {
         transition: all 0.2s ease-in-out;
     }
