@@ -51,39 +51,39 @@ class GitHubService:
             logger.error(f"Failed to validate GitHub token: {str(e)}")
             self.token_valid = False
     
-    def _verify_write_access(self) -> None:
-        """Verify write access when needed"""
+    def _verify_write_access(self, repo_owner: str, repo_name: str) -> None:
+        """Verify write access for specific repository"""
         if not self.github or not self.token_valid:
             raise ValueError("GitHub token not configured or invalid")
             
         try:
-            user = self.github.get_user()
-            repos = list(user.get_repos()[:1])
+            # Get specific repository
+            repo = self.github.get_repo(f"{repo_owner}/{repo_name}")
             
-            if repos:
-                test_repo = repos[0]
-                try:
-                    issues = list(test_repo.get_issues()[:1])
-                    if issues:
-                        test_comment = issues[0].create_comment("Testing write permissions - please ignore")
-                        test_comment.delete()
-                        logger.info("Successfully verified write access permissions")
-                    else:
-                        logger.warning("Could not verify write permissions - no issues available for testing")
-                except GithubException as e:
-                    if e.status == 403:
-                        raise ValueError("Token lacks write permissions. Please ensure the token has 'repo' or appropriate write scope")
-                    raise
-                    
+            # Test permissions on the specific repository
+            try:
+                # Try to create and delete a test comment on an existing issue
+                issues = list(repo.get_issues()[:1])
+                if issues:
+                    test_comment = issues[0].create_comment("Testing write permissions - please ignore")
+                    test_comment.delete()
+                    logger.info(f"Successfully verified write access for repository {repo_owner}/{repo_name}")
+                else:
+                    logger.info(f"No issues available for testing in {repo_owner}/{repo_name}, assuming write access granted")
+            except GithubException as e:
+                if e.status == 403:
+                    raise ValueError(f"Token lacks write permissions for repository {repo_owner}/{repo_name}")
+                raise
+                
         except GithubException as e:
             status_code = getattr(e, 'status', None)
             if status_code == 403:
                 scope_message = self._get_scope_message(e)
-                raise ValueError(f"Token permission denied: {scope_message}")
+                raise ValueError(f"Token permission denied for repository {repo_owner}/{repo_name}: {scope_message}")
+            elif status_code == 404:
+                raise ValueError(f"Repository {repo_owner}/{repo_name} not found or access denied")
             else:
                 raise ValueError(f"GitHub token validation failed: {str(e)}")
-        except Exception as e:
-            raise ValueError(f"Failed to validate write permissions: {str(e)}")
     
     def _get_scope_message(self, error: GithubException) -> str:
         """Extract detailed scope information from GitHub error messages"""
@@ -170,8 +170,8 @@ class GitHubService:
         if not self.github or not self.token_valid:
             raise ValueError("GitHub token not configured or invalid")
             
-        # Verify write access before attempting to post comment
-        self._verify_write_access()
+        # Verify write access for specific repository
+        self._verify_write_access(pr_details['owner'], pr_details['repo'])
         
         try:
             repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
@@ -186,8 +186,8 @@ class GitHubService:
         except GithubException as e:
             if e.status == 403:
                 raise ValueError(
-                    "Cannot post comment. Please ensure the token has write access "
-                    "('repo' scope for private repos, 'public_repo' for public repos)"
+                    f"Cannot post comment to {pr_details['owner']}/{pr_details['repo']}. "
+                    "Please ensure the token has proper write access for this repository."
                 )
             elif e.status == 404:
                 raise ValueError("Repository or PR not found. Please verify the URL and permissions")
