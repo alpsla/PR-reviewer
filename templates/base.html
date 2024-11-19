@@ -153,6 +153,18 @@
             padding: 1rem 0;
             margin-top: auto;
         }
+
+        .footer-content {
+            color: var(--text-primary) !important;
+        }
+
+        [data-bs-theme="light"] .footer-content {
+            color: #1F2937 !important;  /* Darker text for light mode */
+        }
+
+        [data-bs-theme="dark"] .footer-content {
+            color: #F9FAFB !important;  /* Light text for dark mode */
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
