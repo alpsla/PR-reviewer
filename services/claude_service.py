@@ -87,8 +87,7 @@ class ClaudeService:
             if file_extensions:
                 primary_language = max(file_extensions, key=list(file_extensions).count)
 
-        mock_response = f"""
-<div class="review-section">
+        mock_response = f"""<div class="review-section">
     <h3>Summary of Changes</h3>
     <div class="card mb-3">
         <div class="card-body">
