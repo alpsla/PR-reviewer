@@ -70,9 +70,25 @@ class DependencyService:
     def _run_dependency_cruiser(self) -> Optional[Dict]:
         """Run dependency-cruiser analysis"""
         try:
+            # Initialize depcruise config
+            config = {
+                "extends": "dependency-cruiser/configs/recommended-strict",
+                "options": {
+                    "doNotFollow": {
+                        "path": "node_modules"
+                    },
+                    "exclude": "(\\.spec\\.js$|\\.test\\.js$)",
+                    "maxDepth": 6
+                }
+            }
+            
+            config_path = os.path.join(self.temp_dir, '.dependency-cruiser.json')
+            with open(config_path, 'w') as f:
+                json.dump(config, f)
+            
             # Run dependency-cruiser with JSON output
             result = subprocess.run(
-                ['npx', 'depcruise', '--include-only', '^src', '--output-type', 'json', 'src'],
+                ['npx', 'depcruise', '--config', '.dependency-cruiser.json', '--output-type', 'json', '.'],
                 cwd=self.temp_dir,
                 capture_output=True,
                 text=True
@@ -93,7 +109,7 @@ class DependencyService:
         try:
             # Run madge with JSON output
             result = subprocess.run(
-                ['npx', 'madge', '--json', 'src'],
+                ['npx', 'madge', '--json', '.'],
                 cwd=self.temp_dir,
                 capture_output=True,
                 text=True

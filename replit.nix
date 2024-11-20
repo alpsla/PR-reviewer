@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.psmisc
     pkgs.cairo
     pkgs.zlib
     pkgs.tk
