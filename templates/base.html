@@ -223,8 +223,8 @@
     </nav>
 
     <div class="content-wrapper">
-        <main class="container py-5 mt-5">
-            <div class="d-flex justify-content-center align-items-center h-100">
+        <main class="container py-5 mt-5" style="min-height: calc(100vh - 200px); display: flex; align-items: center;">
+            <div class="d-flex justify-content-center align-items-center w-100">
                 <div class="w-100">
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
