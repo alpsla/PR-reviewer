@@ -1,6 +1,6 @@
 {pkgs}: {
   deps = [
-    pkgs.lsof
+    pkgs.psmisc
     pkgs.cairo
     pkgs.zlib
     pkgs.tk

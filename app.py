@@ -5,19 +5,16 @@ from flask_cors import CORS
 from database import db
 from services.github_service import GitHubService
 from services.claude_service import ClaudeService
-from services.dependency_service import DependencyService
 from utils.pr_parser import parse_pr_url
 from datetime import datetime
 from typing import Optional
 import jwt
 from urllib.parse import urlparse
 from sqlalchemy import text
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
-from github.GithubException import GithubException, RateLimitExceededException, BadCredentialsException
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Changed to DEBUG for more detailed logs
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler()
@@ -25,29 +22,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class AnalysisError(Exception):
-    """Custom exception for analysis errors"""
-    pass
-
 def verify_github_token(token: Optional[str]) -> tuple[bool, str]:
     """Verify GitHub token permissions with detailed feedback"""
     if not token:
-        logger.error("No GitHub token provided")
         return False, "GitHub token not found in environment variables"
     
     try:
         # Initialize service to test token
         github_service = GitHubService(token)
         if github_service.token_valid:
-            logger.info("GitHub token verified successfully")
             return True, "Token verified successfully"
-        logger.error("GitHub token validation failed")
-        return False, "Token validation failed - invalid or insufficient permissions"
-    except GithubException as e:
-        logger.error(f"GitHub API error during token validation: {str(e)}")
-        return False, f"GitHub API error: {str(e)}"
+        return False, "Token validation failed"
     except Exception as e:
-        logger.error(f"Unexpected error validating token: {str(e)}")
         return False, f"Unexpected error validating token: {str(e)}"
 
 def create_app():
@@ -116,15 +102,12 @@ def create_app():
 
     # Initialize services without failing startup
     try:
-        github_service = GitHubService(github_token) if github_token else None
-        claude_service = ClaudeService(claude_api_key) if claude_api_key else None
-        dependency_service = DependencyService()
-        logger.info("Services initialized successfully")
+        github_service = GitHubService(github_token if github_token else "")
+        claude_service = ClaudeService(claude_api_key if claude_api_key else "")
     except Exception as e:
         logger.error(f"Error initializing services: {str(e)}")
         github_service = None
         claude_service = None
-        dependency_service = None
 
     @app.route('/', methods=['GET'])
     def index():
@@ -152,75 +135,57 @@ def create_app():
         if request.method == 'GET':
             return redirect(url_for('index'))
             
+        pr_url = request.form.get('pr_url')
+        if not pr_url:
+            flash('Please provide a PR URL', 'error')
+            return redirect(url_for('index'))
+        
         try:
-            pr_url = request.form.get('pr_url')
-            if not pr_url:
-                flash('Please provide a PR URL', 'error')
-                return redirect(url_for('index'))
-                
-            # Parse PR URL first
+            logger.info(f"Processing review request for PR: {pr_url}")
+            
+            # Parse PR URL
             pr_details = parse_pr_url(pr_url)
             if not pr_details:
                 logger.error("Invalid PR URL format")
                 flash('Invalid PR URL format. Please provide a valid GitHub pull request URL.', 'error')
                 return redirect(url_for('index'))
-                
-            # Initialize services with proper error handling
-            if not github_service or not github_service.token_valid:
-                logger.error("GitHub service not properly configured")
-                flash('GitHub service not properly configured', 'error')
+
+            # Verify GitHub token before proceeding
+            if not github_token:
+                flash('GitHub token is not configured. Please check environment variables.', 'error')
                 return redirect(url_for('index'))
-                
-            if not claude_service:
-                logger.error("Claude service not properly configured")
-                flash('Analysis service not properly configured', 'error')
+            
+            token_valid, token_message = verify_github_token(github_token)
+            if not token_valid:
+                flash(f'GitHub token validation failed: {token_message}', 'error')
                 return redirect(url_for('index'))
 
             # Fetch PR data
             try:
                 logger.info("Fetching PR data from GitHub")
                 pr_data = github_service.fetch_pr_data(pr_details)
-                files = github_service.fetch_pr_files(pr_details)
-                comments = github_service.fetch_pr_comments(pr_details)
-            except (GithubException, ValueError) as e:
-                logger.error(f"Error accessing PR: {str(e)}")
+            except ValueError as e:
                 flash(f'Error accessing PR: {str(e)}', 'error')
                 return redirect(url_for('index'))
-
-            # Run dependency analysis
-            try:
-                logger.info("Running dependency analysis")
-                dependency_analysis = dependency_service.analyze_dependencies(files) if dependency_service else None
-            except Exception as e:
-                logger.error(f"Dependency analysis failed: {str(e)}")
-                dependency_analysis = None
-                flash('Dependency analysis unavailable - continuing with basic review', 'warning')
-
+            
             # Analyze with Claude
             logger.info("Analyzing PR with Claude")
             try:
                 context = {
                     'pr_data': pr_data,
-                    'files': files,
-                    'comments': comments,
-                    'dependency_analysis': dependency_analysis
+                    'files': github_service.fetch_pr_files(pr_details),
+                    'comments': github_service.fetch_pr_comments(pr_details)
                 }
                 
                 review_data = claude_service.analyze_pr(context)
-            except TimeoutError:
-                logger.error("PR analysis timed out")
-                flash('Analysis timed out. Please try again with a smaller PR.', 'error')
-                return redirect(url_for('index'))
-            except Exception as e:
-                logger.error(f"Error analyzing PR: {str(e)}")
+            except ValueError as e:
                 flash(f'Error analyzing PR: {str(e)}', 'error')
                 return redirect(url_for('index'))
             
-            # Store review data in session
+            # Store review data in session for save/comment actions
             session['pr_details'] = pr_details
             session['review_data'] = review_data
             session['pr_url'] = pr_url
-            session['dependency_analysis'] = dependency_analysis
             
             # Log mock review usage
             if review_data.get('is_mock', False):
@@ -233,8 +198,12 @@ def create_app():
                 current_time=datetime.utcnow()
             )
             
+        except ValueError as e:
+            logger.error(f"Validation error: {str(e)}")
+            flash(f'Validation Error: {str(e)}', 'error')
+            return redirect(url_for('index'))
         except Exception as e:
-            logger.error(f"Error processing PR: {str(e)}")
+            logger.error(f"Unexpected error during review: {str(e)}")
             flash(f'Error processing PR: {str(e)}', 'error')
             return redirect(url_for('index'))
 
@@ -281,8 +250,10 @@ def create_app():
             if not session.get('review_data') or not session.get('pr_details'):
                 raise ValueError("No review data found in session")
                 
-            if not github_service or not github_service.token_valid:
-                raise ValueError("GitHub service not properly configured")
+            # Verify GitHub token before posting comment
+            token_valid, token_message = verify_github_token(github_token)
+            if not token_valid:
+                raise ValueError(f"GitHub token validation failed: {token_message}")
                 
             review_data = session['review_data']
             pr_details = session['pr_details']
@@ -307,8 +278,8 @@ def create_app():
                     'comment_url': comment_result['url']
                 }), 200
                 
-            except GithubException as e:
-                logger.error(f"GitHub API error while posting comment: {str(e)}")
+            except ValueError as e:
+                logger.error(f"Failed to post comment: {str(e)}")
                 return jsonify({'error': str(e)}), 403
                 
         except Exception as e:
@@ -332,5 +303,5 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5000))  # Using default Flask port 5000
     app.run(host="0.0.0.0", port=port, debug=True)
