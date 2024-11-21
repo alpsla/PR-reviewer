@@ -11,6 +11,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from services.dependency_service import DependencyService
+from services.code_structure_service import CodeStructureService
 
 class ClaudeService:
     def __init__(self, api_key: str):
@@ -31,6 +32,7 @@ class ClaudeService:
                 }
             )
             self.dependency_service = DependencyService()
+            self.code_structure_service = CodeStructureService()
             logger.info("Claude API client initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize Claude API client: {str(e)}")
@@ -45,11 +47,28 @@ class ClaudeService:
             return self.mock_review(context, mock_reason)
             
         try:
-            # Add dependency analysis
+            # Add dependency and code structure analysis
             if 'files' in context:
                 logger.info("Running dependency analysis")
                 dependency_analysis = self.dependency_service.analyze_dependencies(context['files'])
                 context['dependency_analysis'] = dependency_analysis
+                
+                logger.info("Running code structure analysis")
+                structure_analysis = {}
+                for file in context['files']:
+                    try:
+                        analysis = self.code_structure_service.analyze_code(
+                            file.get('content', ''),
+                            file['filename']
+                        )
+                        structure_analysis[file['filename']] = {
+                            'structures': analysis.structures,
+                            'imports': analysis.imports,
+                            'total_complexity': analysis.total_complexity
+                        }
+                    except Exception as e:
+                        logger.error(f"Error analyzing {file['filename']}: {str(e)}")
+                context['structure_analysis'] = structure_analysis
             
             logger.info("Building analysis prompt")
             prompt = self._build_analysis_prompt(context)
