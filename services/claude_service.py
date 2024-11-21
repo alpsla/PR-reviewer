@@ -2,6 +2,7 @@ import anthropic
 from typing import Dict, List, Union, Any
 import logging
 import json
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -339,7 +340,7 @@ Structure your response using HTML with Bootstrap classes:
                 content = response.get('content', '') if isinstance(response, dict) else str(response)
             
             # Clean up response content
-            content = content.replace("Here's the code review feedback structured with HTML and Bootstrap classes:", "").strip()
+            content = re.sub(r"^Here's the code review feedback structured with HTML and Bootstrap classes:?\s*", "", content, flags=re.IGNORECASE).strip()
             
             # Validate HTML structure
             if not ('<div' in content and '</div>' in content):

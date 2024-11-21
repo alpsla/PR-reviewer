@@ -102,7 +102,7 @@ class LanguageDetectionService:
     async def detectFromGitHub(self, pr_url: str) -> RepositoryLanguages:
         """Detect languages from a GitHub PR URL"""
         try:
-            logger.info(f"Starting GitHub language detection for PR: {pr_url}")
+            logger.info(f"Language Determination: Starting GitHub analysis for PR: {pr_url}")
             
             # Parse PR URL to get owner and repo
             parsed = urlparse(pr_url)
@@ -135,7 +135,7 @@ class LanguageDetectionService:
             
             for lang, bytes in sorted_languages:
                 percentage = (bytes / total_bytes) * 100
-                logger.info(f"Language detected: {lang} ({bytes} bytes, {percentage:.1f}% of codebase)")
+                logger.info(f"Language Determination: Detected {lang} ({bytes} bytes, {percentage:.1f}% of codebase)")
             
             if not sorted_languages:
                 raise ValueError("No languages detected in repository")
@@ -174,12 +174,12 @@ class LanguageDetectionService:
     async def detectFromContent(self, files: List[FileContent]) -> RepositoryLanguages:
         """Detect languages from file contents"""
         try:
-            logger.info(f"Starting content-based language detection for {len(files)} files")
+            logger.info(f"Language Determination: Starting content-based analysis for {len(files)} files")
             language_stats: Dict[str, Dict] = {}
             total_bytes = 0
             
             for file in files:
-                logger.info(f"Processing file: {file['filename']}")
+                logger.info(f"Language Determination: Processing file: {file['filename']}")
                 # Get file extension
                 extension = file['filename'].split('.')[-1] if '.' in file['filename'] else ''
                 if not extension:
@@ -192,7 +192,7 @@ class LanguageDetectionService:
                 
                 # Calculate confidence score
                 confidence = LanguageTools.calculate_confidence(file['content'], lang_info)
-                logger.info(f"Language {lang_info['name']} detected with {confidence:.2f} confidence for file {file['filename']}")
+                logger.info(f"Language Determination: {lang_info['name']} detected with {confidence:.2f} confidence for file {file['filename']}")
                 
                 # Update language statistics
                 if lang_info['name'] not in language_stats:
