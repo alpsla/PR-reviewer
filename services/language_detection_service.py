@@ -67,7 +67,9 @@ class LanguageTools:
     @staticmethod
     def calculate_confidence(content: str, language_info: Dict[str, str]) -> float:
         """Calculate confidence score based on file content and language"""
+        logger.debug(f"Calculating confidence score for {language_info['name']}")
         confidence = 0.7  # Base confidence from extension
+        logger.debug(f"Base confidence from extension: {confidence}")
 
         # Language-specific patterns
         patterns = {
@@ -83,6 +85,7 @@ class LanguageTools:
             pattern, boost = patterns[language_info['name']]
             if re.search(pattern, content, re.IGNORECASE):
                 confidence += boost
+                logger.debug(f"Found {language_info['name']} patterns in content, boosting confidence by {boost}")
 
         return min(confidence, 1.0)
 
@@ -99,6 +102,8 @@ class LanguageDetectionService:
     async def detectFromGitHub(self, pr_url: str) -> RepositoryLanguages:
         """Detect languages from a GitHub PR URL"""
         try:
+            logger.info(f"Starting GitHub language detection for PR: {pr_url}")
+            
             # Parse PR URL to get owner and repo
             parsed = urlparse(pr_url)
             path_parts = parsed.path.strip('/').split('/')
@@ -106,6 +111,7 @@ class LanguageDetectionService:
                 raise ValueError(f"Invalid GitHub PR URL: {pr_url}")
 
             owner, repo = path_parts[0:2]
+            logger.info(f"Analyzing repository: {owner}/{repo}")
             
             # Call GitHub API
             headers = {'Authorization': f'token {self.github_token}'} if self.github_token else {}
@@ -118,6 +124,7 @@ class LanguageDetectionService:
             # Process GitHub response
             languages_data = response.json()
             total_bytes = sum(languages_data.values())
+            logger.info(f"Found {len(languages_data)} languages in repository, total size: {total_bytes} bytes")
             
             # Sort languages by bytes
             sorted_languages = sorted(
@@ -125,6 +132,10 @@ class LanguageDetectionService:
                 key=lambda x: x[1],
                 reverse=True
             )
+            
+            for lang, bytes in sorted_languages:
+                percentage = (bytes / total_bytes) * 100
+                logger.info(f"Language detected: {lang} ({bytes} bytes, {percentage:.1f}% of codebase)")
             
             if not sorted_languages:
                 raise ValueError("No languages detected in repository")
@@ -163,10 +174,12 @@ class LanguageDetectionService:
     async def detectFromContent(self, files: List[FileContent]) -> RepositoryLanguages:
         """Detect languages from file contents"""
         try:
+            logger.info(f"Starting content-based language detection for {len(files)} files")
             language_stats: Dict[str, Dict] = {}
             total_bytes = 0
             
             for file in files:
+                logger.info(f"Processing file: {file['filename']}")
                 # Get file extension
                 extension = file['filename'].split('.')[-1] if '.' in file['filename'] else ''
                 if not extension:
@@ -179,6 +192,7 @@ class LanguageDetectionService:
                 
                 # Calculate confidence score
                 confidence = LanguageTools.calculate_confidence(file['content'], lang_info)
+                logger.info(f"Language {lang_info['name']} detected with {confidence:.2f} confidence for file {file['filename']}")
                 
                 # Update language statistics
                 if lang_info['name'] not in language_stats:

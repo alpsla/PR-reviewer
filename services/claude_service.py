@@ -319,6 +319,9 @@ Structure your response using HTML with Bootstrap classes:
                 # Fallback for other response structures
                 content = response.get('content', '') if isinstance(response, dict) else str(response)
             
+            # Clean up response content
+            content = content.replace("Here's the code review feedback structured with HTML and Bootstrap classes:", "").strip()
+            
             # Validate HTML structure
             if not ('<div' in content and '</div>' in content):
                 logger.warning("Response doesn't contain expected HTML structure")
