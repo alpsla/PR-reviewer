@@ -276,6 +276,14 @@ async def review(request: Request, pr_url: str = Form(...)):
         pr_data = github_service.fetch_pr_data(pr_details)
         files = await github_service.fetch_pr_files(pr_details)
         comments = await github_service.fetch_pr_comments(pr_details)
+        
+        # Convert files and comments content for analysis
+        for file in files:
+            try:
+                file['content'] = file.get('patch', '')  # Use patch as content for analysis
+            except Exception as e:
+                logger.error(f"Error processing file content: {str(e)}")
+                file['content'] = ''
 
         # Initialize code structure service
         from services.code_structure_service import CodeStructureService

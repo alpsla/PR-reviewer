@@ -122,7 +122,7 @@ class GitHubService:
             else:
                 raise ValueError(f"Failed to fetch PR data: {str(e)}")
     
-    def fetch_pr_files(self, pr_details: Dict) -> List[Dict]:
+    async def fetch_pr_files(self, pr_details: Dict) -> List[Dict]:
         """Fetches files changed in the PR with enhanced error handling"""
         if not self.github or not self.token_valid:
             raise ValueError("GitHub token not configured or invalid")
@@ -131,21 +131,24 @@ class GitHubService:
             repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
             pr = repo.get_pull(pr_details['number'])
             
-            return [{
-                'filename': f.filename,
-                'status': f.status,
-                'additions': f.additions,
-                'deletions': f.deletions,
-                'changes': f.changes,
-                'patch': f.patch
-            } for f in pr.get_files()]
+            files_data = []
+            for f in pr.get_files():
+                files_data.append({
+                    'filename': f.filename,
+                    'status': f.status,
+                    'additions': f.additions,
+                    'deletions': f.deletions,
+                    'changes': f.changes,
+                    'patch': f.patch
+                })
+            return files_data
         except GithubException as e:
             if e.status == 403:
                 raise ValueError("Access denied. Please check repository permissions for file access")
             else:
                 raise ValueError(f"Failed to fetch PR files: {str(e)}")
     
-    def fetch_pr_comments(self, pr_details: Dict) -> List[Dict]:
+    async def fetch_pr_comments(self, pr_details: Dict) -> List[Dict]:
         """Fetches PR comments with enhanced error handling"""
         if not self.github or not self.token_valid:
             raise ValueError("GitHub token not configured or invalid")
@@ -154,11 +157,14 @@ class GitHubService:
             repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
             pr = repo.get_pull(pr_details['number'])
             
-            return [{
-                'user': comment.user.login,
-                'body': comment.body,
-                'created_at': comment.created_at
-            } for comment in pr.get_comments()]
+            comments_data = []
+            for comment in pr.get_comments():
+                comments_data.append({
+                    'user': comment.user.login,
+                    'body': comment.body,
+                    'created_at': comment.created_at
+                })
+            return comments_data
         except GithubException as e:
             if e.status == 403:
                 raise ValueError("Access denied. Please check permissions for viewing comments")
