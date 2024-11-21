@@ -130,6 +130,7 @@ class DependencyService:
         dependency_graph = {}
         circular_dependencies = []
         external_dependencies = []
+        structure_analysis = {}
         
         # Process dependency-cruiser results
         if dep_cruiser_result:
@@ -149,6 +150,14 @@ class DependencyService:
                                     'module': source,
                                     'depends_on': dep['resolved']
                                 })
+                    
+                    # Perform code structure analysis
+                    structure_analysis[source] = {
+                        'exports': self._analyze_exports(module),
+                        'functions': self._analyze_function_length(module),
+                        'duplication': self._find_code_duplication(module),
+                        'comment_ratio': self._calculate_comment_ratio(module)
+                    }
         
         # Process madge results for circular dependencies
         if madge_result:
@@ -160,9 +169,113 @@ class DependencyService:
                         # Found circular dependency
                         if [source, dep] not in circular_dependencies and [dep, source] not in circular_dependencies:
                             circular_dependencies.append([source, dep])
+
+    def _analyze_exports(self, module: Dict) -> List[str]:
+        """Analyze module exports"""
+        exports = []
+        if not module.get('source'):
+            return exports
+            
+        content = module.get('source', '')
         
-        return {
-            'dependency_graph': dependency_graph,
-            'circular_dependencies': circular_dependencies,
-            'external_dependencies': external_dependencies
+        # Find exports through __all__
+        for line in content.splitlines():
+            if '__all__' in line and '=' in line:
+                try:
+                    # Extract list items from __all__ definition
+                    items = line.split('=')[1].strip()
+                    if items.startswith('[') and items.endswith(']'):
+                        items = items[1:-1]  # Remove brackets
+                        exports.extend([item.strip().strip("'").strip('"') 
+                                     for item in items.split(',') if item.strip()])
+                except Exception as e:
+                    logger.error(f"Error parsing __all__ in {module.get('source', '')}: {str(e)}")
+        
+        # Find other exports (public functions and classes)
+        for line in content.splitlines():
+            if line.strip().startswith(('def ', 'class ')) and not line.strip().startswith('_'):
+                name = line.split()[1].split('(')[0]
+                if name not in exports:
+                    exports.append(name)
+        
+        return exports
+
+    def _analyze_function_length(self, module: Dict) -> Dict[str, int]:
+        """Analyze function lengths in the module"""
+        functions = {}
+        if not module.get('source'):
+            return functions
+
+        current_function = None
+        current_length = 0
+        
+        for line in module.get('source', '').splitlines():
+            if line.strip().startswith('def '):
+                if current_function:
+                    functions[current_function] = current_length
+                current_function = line.split('def ')[1].split('(')[0]
+                current_length = 1
+            elif current_function and line.strip():
+                current_length += 1
+            elif current_function and not line.strip():
+                functions[current_function] = current_length
+                current_function = None
+                current_length = 0
+        
+        if current_function:
+            functions[current_function] = current_length
+            
+        return functions
+
+    def _find_code_duplication(self, module: Dict) -> Dict:
+        """Find potential code duplication"""
+        duplication = {
+            'duplicate_blocks': [],
+            'similarity_score': 0.0
         }
+        
+        if not module.get('source'):
+            return duplication
+        
+        content = module.get('source', '')
+        lines = content.splitlines()
+        block_size = 6  # Minimum block size to consider
+        
+        for i in range(len(lines) - block_size):
+            block1 = '\n'.join(lines[i:i + block_size])
+            for j in range(i + block_size, len(lines) - block_size):
+                block2 = '\n'.join(lines[j:j + block_size])
+                if block1 == block2:
+                    duplication['duplicate_blocks'].append({
+                        'start_line1': i + 1,
+                        'end_line1': i + block_size,
+                        'start_line2': j + 1,
+                        'end_line2': j + block_size
+                    })
+        
+        if duplication['duplicate_blocks']:
+            total_duplicated = sum(block_size for _ in duplication['duplicate_blocks'])
+            duplication['similarity_score'] = total_duplicated / len(lines)
+        
+        return duplication
+
+    def _calculate_comment_ratio(self, module: Dict) -> float:
+        """Calculate the ratio of comments to code"""
+        if not module.get('source'):
+            return 0.0
+        
+        content = module.get('source', '')
+        lines = content.splitlines()
+        
+        comment_lines = len([line for line in lines 
+                           if line.strip().startswith('#') or 
+                           line.strip().startswith('"""') or 
+                           line.strip().startswith("'''")]) 
+        
+        code_lines = len([line for line in lines 
+                         if line.strip() and 
+                         not line.strip().startswith('#') and 
+                         not line.strip().startswith('"""') and 
+                         not line.strip().startswith("'''")])
+        
+        return comment_lines / max(1, code_lines)
