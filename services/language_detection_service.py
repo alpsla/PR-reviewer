@@ -49,6 +49,21 @@ class FileContent(TypedDict, total=False):
 class LanguageTools:
     """Common language detection tools and utilities"""
     
+    # Skip patterns for non-code files
+    SKIP_EXTENSIONS = {
+        '.md', '.txt', '.json', '.lock', '.nix', '.svg', '.html',
+        '.log', '.csv', '.yml', '.yaml', '.png', '.jpg', '.jpeg', 
+        '.gif', '.ico', '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+        '.env', '.gitignore', '.dockerignore'
+    }
+    
+    @staticmethod
+    def should_skip_file(filename: str) -> bool:
+        """Determine if a file should be skipped based on its extension"""
+        ext = Path(filename).suffix.lower()
+        return (ext in LanguageTools.SKIP_EXTENSIONS or
+                any(pattern in filename for pattern in ['__pycache__', '.git', 'node_modules']))
+    
     # Language extension mappings based on GitHub's linguist
     EXTENSION_MAP = {
         'py': {'name': 'Python', 'type': 'programming'},
@@ -248,24 +263,8 @@ class LanguageDetectionService:
                     logger.error(f"Error processing file {file.get('filename', 'unknown')}: {str(e)}")
                     continue
                 
-                # Calculate confidence score
-                confidence = LanguageTools.calculate_confidence(file['content'], lang_info)
-                logger.info(f"Language Determination: {lang_info['name']} detected with {confidence:.2f} confidence for file {file['filename']}")
-                
-                # Update language statistics
-                if lang_info['name'] not in language_stats:
-                    language_stats[lang_info['name']] = {
-                        'bytes': 0,
-                        'confidence': 0,
-                        'type': lang_info['type']
-                    }
-                
-                language_stats[lang_info['name']]['bytes'] += file['size']
-                language_stats[lang_info['name']]['confidence'] = max(
-                    language_stats[lang_info['name']]['confidence'],
-                    confidence
-                )
-                total_bytes += file['size']
+                # Already processed above
+                pass
             
             # Sort languages by bytes
             sorted_languages = sorted(
