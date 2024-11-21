@@ -106,6 +106,10 @@ class ClaudeService:
         additions = context['pr_data']['additions']
         deletions = context['pr_data']['deletions']
         
+        # Get code structure analysis metrics if available
+        structure_analysis = context.get('structure_analysis', {})
+        has_metrics = bool(structure_analysis)
+        
         file_extensions = set()
         primary_language = "code"
         if 'files' in context:
@@ -182,6 +186,36 @@ class ClaudeService:
                 <li><i class="bi bi-shield-exclamation text-warning"></i> Consider adding input validation where applicable</li>
                 <li><i class="bi bi-shield-exclamation text-warning"></i> Review authentication handling if present</li>
                 <li><i class="bi bi-shield-exclamation text-warning"></i> Verify data sanitization practices</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="review-section">
+    <h3>Code Structure Analysis</h3>
+    <div class="card mb-3">
+        <div class="card-body">
+            <h4>Complexity Metrics</h4>
+            <ul class="list-unstyled mb-0">"""
+        
+        if has_metrics:
+            for filename, analysis in structure_analysis.items():
+                total = analysis.get('total_complexity', {})
+                mock_response += f"""
+                <li class="mb-3">
+                    <strong>{filename}</strong>
+                    <ul class="list-unstyled ps-3">
+                        <li><i class="bi bi-graph-up"></i> Cyclomatic Complexity: {total.get('cyclomatic_complexity', 'N/A')}</li>
+                        <li><i class="bi bi-brain"></i> Cognitive Complexity: {total.get('cognitive_complexity', 'N/A')}</li>
+                        <li><i class="bi bi-diagram-2"></i> Nesting Depth: {total.get('nesting_depth', 'N/A')}</li>
+                        <li><i class="bi bi-speedometer2"></i> Maintainability Index: {total.get('maintainability_index', 'N/A'):.1f}</li>
+                    </ul>
+                </li>"""
+        else:
+            mock_response += """
+                <li><i class="bi bi-exclamation-circle text-warning"></i> Code structure analysis not available</li>"""
+            
+        mock_response += """
             </ul>
         </div>
     </div>
@@ -341,6 +375,7 @@ Structure your response using HTML with Bootstrap classes:
             
             # Clean up response content
             content = re.sub(r"^Here's the code review feedback structured with HTML and Bootstrap classes:?\s*", "", content, flags=re.IGNORECASE).strip()
+            content = re.sub(r'```html\s*|\s*```$', '', content, flags=re.IGNORECASE).strip()
             
             # Validate HTML structure
             if not ('<div' in content and '</div>' in content):
