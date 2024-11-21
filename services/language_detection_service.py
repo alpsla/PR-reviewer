@@ -26,12 +26,26 @@ class RepositoryLanguages(TypedDict):
     total_bytes: int
     detection_source: str  # 'github' or 'content'
 
-class FileContent(TypedDict):
-    """File content information"""
-    filename: str
-    content: str
-    size: int
+class FileContent(TypedDict, total=False):
+    """File content information with optional fields"""
+    filename: str  # Required
+    content: str   # Required
+    size: int     # Optional, will be calculated if not provided
+    type: str     # Optional, detected from extension
 
+    # Non-code file extensions to skip
+    SKIP_EXTENSIONS = {
+        'md', 'txt', 'log', 'csv', 'json', 'yml', 'yaml', 
+        'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico',
+        'pdf', 'doc', 'docx', 'xls', 'xlsx',
+        'lock', 'env', 'gitignore', 'dockerignore'
+    }
+    
+    @staticmethod
+    def should_skip_file(filename: str) -> bool:
+        """Determine if a file should be skipped based on its extension"""
+        ext = filename.split('.')[-1].lower() if '.' in filename else ''
+        return ext in LanguageTools.SKIP_EXTENSIONS
 class LanguageTools:
     """Common language detection tools and utilities"""
     
@@ -172,22 +186,66 @@ class LanguageDetectionService:
             raise RuntimeError(f"Language detection failed: {str(e)}")
 
     async def detectFromContent(self, files: List[FileContent]) -> RepositoryLanguages:
-        """Detect languages from file contents"""
+        """Detect languages from file contents with enhanced validation and error handling"""
         try:
             logger.info(f"Language Determination: Starting content-based analysis for {len(files)} files")
             language_stats: Dict[str, Dict] = {}
             total_bytes = 0
+            skipped_files = []
             
             for file in files:
-                logger.info(f"Language Determination: Processing file: {file['filename']}")
-                # Get file extension
-                extension = file['filename'].split('.')[-1] if '.' in file['filename'] else ''
-                if not extension:
-                    continue
-                
-                # Get language info from extension
-                lang_info = LanguageTools.get_language_from_extension(extension)
-                if not lang_info:
+                try:
+                    filename = file['filename']
+                    logger.info(f"Language Determination: Processing file: {filename}")
+                    
+                    # Skip non-code files
+                    if LanguageTools.should_skip_file(filename):
+                        skipped_files.append(filename)
+                        logger.info(f"Language Determination: Skipping non-code file: {filename}")
+                        continue
+                    
+                    # Calculate file size if not provided
+                    try:
+                        if 'size' not in file or not file['size']:
+                            content = file.get('content', '')
+                            file['size'] = len(content.encode('utf-8'))
+                            logger.debug(f"Language Determination: Calculated size for {filename}: {file['size']} bytes")
+                    except Exception as e:
+                        logger.error(f"Language Determination: Error calculating file size for {filename}: {str(e)}")
+                        file['size'] = 0
+                    
+                    # Get file extension
+                    extension = filename.split('.')[-1] if '.' in filename else ''
+                    if not extension:
+                        logger.info(f"Language Determination: Skipping file without extension: {filename}")
+                        skipped_files.append(filename)
+                        continue
+                    
+                    # Get language info from extension
+                    lang_info = LanguageTools.get_language_from_extension(extension)
+                    if not lang_info:
+                        continue
+                        
+                    # Calculate confidence score
+                    confidence = LanguageTools.calculate_confidence(file.get('content', ''), lang_info)
+                    logger.info(f"Language Determination: {lang_info['name']} detected with {confidence:.2f} confidence for file {filename}")
+                    
+                    # Update language statistics
+                    if lang_info['name'] not in language_stats:
+                        language_stats[lang_info['name']] = {
+                            'bytes': 0,
+                            'confidence': 0,
+                            'type': lang_info['type']
+                        }
+                    
+                    language_stats[lang_info['name']]['bytes'] += file['size']
+                    language_stats[lang_info['name']]['confidence'] = max(
+                        language_stats[lang_info['name']]['confidence'],
+                        confidence
+                    )
+                    total_bytes += file['size']
+                except Exception as e:
+                    logger.error(f"Error processing file {file.get('filename', 'unknown')}: {str(e)}")
                     continue
                 
                 # Calculate confidence score

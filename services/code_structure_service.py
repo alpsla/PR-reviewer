@@ -53,9 +53,43 @@ class AnalysisResult:
 class CodeStructureService:
     """Service for analyzing code structure and complexity"""
     
+    # File extensions to analyze
+    SUPPORTED_EXTENSIONS = {
+        '.py': 'Python',
+        '.js': 'JavaScript',
+        '.jsx': 'JavaScript React',
+        '.ts': 'TypeScript',
+        '.tsx': 'TypeScript React'
+    }
+    
+    # Skip patterns for files
+    SKIP_PATTERNS = [
+        '.test.', '.spec.',  # Test files
+        '.min.', '.bundle.',  # Minified/bundled files
+        '__init__',  # Python init files
+        'setup.', 'config.'  # Setup/config files
+    ]
+    
     def analyze_code(self, content: str, filename: str) -> AnalysisResult:
-        """Analyze code structure and complexity"""
+        """Analyze code structure and complexity with enhanced validation"""
         try:
+            # Validate file type
+            ext = Path(filename).suffix.lower()
+            if ext not in self.SUPPORTED_EXTENSIONS:
+                logger.info(f"Skipping unsupported file type: {filename}")
+                return self._empty_result()
+                
+            # Check skip patterns
+            if any(pattern in filename for pattern in self.SKIP_PATTERNS):
+                logger.info(f"Skipping pattern-matched file: {filename}")
+                return self._empty_result()
+                
+            # Validate content size
+            content_size = len(content.encode('utf-8'))
+            if content_size > 1_000_000:  # Skip files larger than 1MB
+                logger.warning(f"File too large to analyze: {filename} ({content_size} bytes)")
+                return self._empty_result()
+                
             logger.info(f"Analyzing code structure for {filename}")
             tree = ast.parse(content)
             
@@ -288,6 +322,18 @@ class CodeStructureService:
                 })
         
         # Check for long parameter list
+    def _empty_result(self) -> AnalysisResult:
+        """Create an empty analysis result"""
+        return AnalysisResult(
+            structures=[],
+            imports=[],
+            total_complexity={
+                'cyclomatic_complexity': 0,
+                'cognitive_complexity': 0,
+                'nesting_depth': 0,
+                'maintainability_index': 0.0
+            }
+        )
         if isinstance(node, ast.FunctionDef):
             args_count = len(node.args.args)
             if args_count > 5:
