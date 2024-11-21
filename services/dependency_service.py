@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class DependencyService:
     def __init__(self):
         """Initialize dependency analysis service"""
-        self.temp_dir = None
+        self.temp_dir: str = ""
         
     def analyze_dependencies(self, files: List[Dict]) -> Dict:
         """Analyze dependencies in the provided files"""
@@ -53,41 +53,119 @@ class DependencyService:
                     logger.error(f"Failed to cleanup temp directory: {str(e)}")
     
     def _write_files_to_temp(self, files: List[Dict]) -> None:
-        """Write PR files to temporary directory"""
+        """Write PR files to temporary directory with filtering"""
+        # File extensions to analyze
+        CODE_EXTENSIONS = {
+            # JavaScript/TypeScript
+            '.js': 'JavaScript',
+            '.jsx': 'JavaScript React',
+            '.ts': 'TypeScript',
+            '.tsx': 'TypeScript React',
+            # Python
+            '.py': 'Python',
+            # Other languages
+            '.java': 'Java',
+            '.go': 'Go',
+            '.rb': 'Ruby',
+            '.php': 'PHP'
+        }
+        
+        # Skip patterns for configuration and test files
+        SKIP_PATTERNS = [
+            '.test.', '.spec.', '.config.',  # Test and config files
+            'package.json', 'package-lock.json',  # Package files
+            '.replit', 'poetry.lock', 'pyproject.toml',  # Project config
+            '.git', '.env', '.vscode',  # Hidden/IDE files
+            'README', 'LICENSE', '.md', '.txt'  # Documentation
+        ]
+        
         for file in files:
-            if not file.get('patch'):
+            filename = file.get('filename', '')
+            if not filename or not file.get('patch'):
                 continue
                 
-            file_path = os.path.join(self.temp_dir, file['filename'])
+            # Get file extension and validate
+            ext = os.path.splitext(filename)[1].lower()
+            if ext not in CODE_EXTENSIONS:
+                logger.debug(f"Skipping non-code file: {filename} (unsupported extension)")
+                continue
+                
+            # Skip files matching skip patterns
+            if any(pattern in filename.lower() for pattern in SKIP_PATTERNS):
+                logger.debug(f"Skipping file: {filename} (matches skip pattern)")
+                continue
+                
+            logger.info(f"Processing {CODE_EXTENSIONS[ext]} file: {filename}")
+            
+            file_path = os.path.join(str(self.temp_dir), filename)
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             
             try:
+                logger.info(f"Processing file for analysis: {filename}")
                 with open(file_path, 'w') as f:
                     f.write(file['patch'])
             except Exception as e:
-                logger.error(f"Failed to write file {file['filename']}: {str(e)}")
+                logger.error(f"Failed to write file {filename}: {str(e)}")
+                continue
+            
+            logger.debug(f"Successfully wrote {filename} to temp directory")
     
     def _run_dependency_cruiser(self) -> Optional[Dict]:
-        """Run dependency-cruiser analysis"""
+        """Run dependency-cruiser analysis with improved error handling"""
         try:
-            # Initialize depcruise config
+            logger.info("Configuring dependency-cruiser analysis")
+            # Initialize depcruise config with expanded options
             config = {
                 "extends": "dependency-cruiser/configs/recommended-strict",
                 "options": {
                     "doNotFollow": {
-                        "path": "node_modules"
+                        "path": "node_modules",
+                        "dependencyTypes": [
+                            "npm",
+                            "npm-dev",
+                            "npm-optional",
+                            "npm-peer",
+                            "npm-bundled"
+                        ]
                     },
-                    "exclude": "(\\.spec\\.js$|\\.test\\.js$)",
-                    "maxDepth": 6
+                    "exclude": "(\\.spec\\.js$|\\.test\\.js$|\\.config\\.js$|\\.replit$|package\\.json$)",
+                    "maxDepth": 6,
+                    "includeOnly": "\\.(js|jsx|ts|tsx)$",
+                    "enhancedResolveOptions": {
+                        "exportsFields": ["exports"],
+                        "conditionNames": ["import", "require", "node", "default"]
+                    }
                 }
             }
             
-            config_path = os.path.join(self.temp_dir, '.dependency-cruiser.json')
-            with open(config_path, 'w') as f:
-                json.dump(config, f)
-            
-            # Run dependency-cruiser with JSON output
-            result = subprocess.run(
+            config_path = os.path.join(str(self.temp_dir), '.dependency-cruiser.json')
+            try:
+                with open(config_path, 'w') as f:
+                    json.dump(config, f, indent=2)
+                logger.info("Successfully wrote dependency-cruiser configuration")
+            except Exception as e:
+                logger.error(f"Failed to write dependency-cruiser configuration: {str(e)}")
+                return None
+                
+            # Run dependency-cruiser with JSON output and handle errors
+            try:
+                result = subprocess.run(
+                    ['npx', 'depcruise', '--config', '.dependency-cruiser.json', '--output-type', 'json', '.'],
+                    cwd=self.temp_dir,
+                    capture_output=True,
+                    text=True
+                )
+                
+                if result.returncode == 0:
+                    return json.loads(result.stdout)
+                else:
+                    logger.error(f"dependency-cruiser failed: {result.stderr}")
+                    return None
+                    
+            except Exception as e:
+                logger.error(f"Failed to run dependency-cruiser: {str(e)}")
+                return None
+                result = subprocess.run(
                 ['npx', 'depcruise', '--config', '.dependency-cruiser.json', '--output-type', 'json', '.'],
                 cwd=self.temp_dir,
                 capture_output=True,
@@ -127,6 +205,18 @@ class DependencyService:
     
     def _process_results(self, dep_cruiser_result: Optional[Dict], madge_result: Optional[Dict]) -> Dict:
         """Process and combine results from both tools"""
+        result = {
+            'dependency_graph': {},
+            'circular_dependencies': [],
+            'external_dependencies': [],
+            'structure_analysis': {},
+            'error': None
+        }
+        
+        if not dep_cruiser_result and not madge_result:
+            result['error'] = "No analysis results available from either tool"
+            return result
+            
         dependency_graph = {}
         circular_dependencies = []
         external_dependencies = []
@@ -169,6 +259,16 @@ class DependencyService:
                         # Found circular dependency
                         if [source, dep] not in circular_dependencies and [dep, source] not in circular_dependencies:
                             circular_dependencies.append([source, dep])
+        
+        # Combine results
+        result.update({
+            'dependency_graph': dependency_graph,
+            'circular_dependencies': circular_dependencies,
+            'external_dependencies': external_dependencies,
+            'structure_analysis': structure_analysis
+        })
+        
+        return result
 
     def _analyze_exports(self, module: Dict) -> List[str]:
         """Analyze module exports"""
