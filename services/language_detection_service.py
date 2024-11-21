@@ -4,6 +4,7 @@ import re
 from urllib.parse import urlparse
 import requests
 from functools import lru_cache
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -32,20 +33,6 @@ class FileContent(TypedDict, total=False):
     content: str   # Required
     size: int     # Optional, will be calculated if not provided
     type: str     # Optional, detected from extension
-
-    # Non-code file extensions to skip
-    SKIP_EXTENSIONS = {
-        'md', 'txt', 'log', 'csv', 'json', 'yml', 'yaml', 
-        'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico',
-        'pdf', 'doc', 'docx', 'xls', 'xlsx',
-        'lock', 'env', 'gitignore', 'dockerignore'
-    }
-    
-    @staticmethod
-    def should_skip_file(filename: str) -> bool:
-        """Determine if a file should be skipped based on its extension"""
-        ext = filename.split('.')[-1].lower() if '.' in filename else ''
-        return ext in LanguageTools.SKIP_EXTENSIONS
 class LanguageTools:
     """Common language detection tools and utilities"""
     
@@ -57,12 +44,30 @@ class LanguageTools:
         '.env', '.gitignore', '.dockerignore'
     }
     
+    # Skip directory patterns
+    SKIP_PATTERNS = ['__pycache__', '.git', 'node_modules', 'build', 'dist']
+    
     @staticmethod
     def should_skip_file(filename: str) -> bool:
-        """Determine if a file should be skipped based on its extension"""
-        ext = Path(filename).suffix.lower()
-        return (ext in LanguageTools.SKIP_EXTENSIONS or
-                any(pattern in filename for pattern in ['__pycache__', '.git', 'node_modules']))
+        """Determine if a file should be skipped based on its extension and path"""
+        try:
+            path = Path(filename)
+            # Check for skip patterns in the full path
+            if any(pattern in str(path) for pattern in LanguageTools.SKIP_PATTERNS):
+                logger.debug(f"Skipping file in excluded directory: {filename}")
+                return True
+                
+            # Check file extension
+            ext = path.suffix.lower()
+            if ext in LanguageTools.SKIP_EXTENSIONS:
+                logger.debug(f"Skipping file with excluded extension: {filename}")
+                return True
+                
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error checking file skip status: {str(e)}")
+            return True  # Skip file on error
     
     # Language extension mappings based on GitHub's linguist
     EXTENSION_MAP = {
