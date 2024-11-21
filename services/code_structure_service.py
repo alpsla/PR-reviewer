@@ -1,6 +1,8 @@
 import ast
 import logging
-from typing import Dict, List, Optional, TypedDict
+import math
+import re
+from typing import Dict, List, Optional, TypedDict, Union, Sequence
 from dataclasses import dataclass
 
 # Configure logging
@@ -10,82 +12,96 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+class CodeSmell(TypedDict):
+    """Code smell information"""
+    type: str  # Type of code smell
+    description: str  # Description of the issue
+    severity: str  # 'low', 'medium', 'high'
+    location: str  # Where the smell was found
+
+class APIStabilityInfo(TypedDict):
+    """API stability tracking"""
+    is_public: bool
+    has_breaking_changes: bool
+    version_info: Optional[str]
+
 class ComplexityMetrics(TypedDict):
     """Complexity metrics for code structures"""
     cyclomatic_complexity: int
     cognitive_complexity: int
     nesting_depth: int
+    maintainability_index: float
 
 class StructureInfo(TypedDict):
     """Information about code structures"""
     name: str
-    type: str  # 'class', 'function', 'method'
+    type: str  # 'class' or 'function'
     start_line: int
     end_line: int
     complexity: ComplexityMetrics
     dependencies: List[str]
     docstring: Optional[str]
+    api_stability: APIStabilityInfo
+    code_smells: Sequence[CodeSmell]
 
 @dataclass
-class CodeStructure:
-    """Code structure analysis results"""
+class CodeAnalysis:
+    """Results of code structure analysis"""
     structures: List[StructureInfo]
     imports: List[str]
     total_complexity: ComplexityMetrics
-    file_path: str
 
 class CodeStructureService:
     """Service for analyzing code structure and complexity"""
     
-    def __init__(self):
-        """Initialize the code structure analysis service"""
-        logger.info("Initializing code structure analysis service")
-    
-    def analyze_code(self, content: str, file_path: str) -> CodeStructure:
+    def analyze_code(self, content: str, filename: str) -> CodeAnalysis:
         """Analyze code structure and complexity"""
+        logger.info(f"Analyzing code structure for {filename}")
         try:
-            logger.info(f"Starting code structure analysis for {file_path}")
             tree = ast.parse(content)
-            
-            structures = []
-            imports = []
+            structures: List[StructureInfo] = []
             total_complexity = {
                 'cyclomatic_complexity': 0,
                 'cognitive_complexity': 0,
-                'nesting_depth': 0
+                'nesting_depth': 0,
+                'maintainability_index': 0.0
             }
             
-            # Analyze imports
-            imports = self._analyze_imports(tree)
-            logger.info(f"Found {len(imports)} imports")
+            # Find imports
+            imports = self._find_imports(tree)
             
-            # Analyze classes and functions
+            # Analyze each class and function
             for node in ast.walk(tree):
                 if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
-                    structure = self._analyze_node(node)
-                    structures.append(structure)
-                    
-                    # Update total complexity
-                    for metric, value in structure['complexity'].items():
-                        total_complexity[metric] += value
+                    try:
+                        structure_info = self._analyze_node(node)
+                        structures.append(structure_info)
+                        
+                        # Update total complexity
+                        for metric in ['cyclomatic_complexity', 'cognitive_complexity', 'nesting_depth']:
+                            total_complexity[metric] += structure_info['complexity'][metric]
+                            
+                    except Exception as e:
+                        logger.error(f"Error analyzing node {getattr(node, 'name', 'unknown')}: {str(e)}")
             
-            logger.info(f"Analysis complete - Found {len(structures)} code structures")
-            return CodeStructure(
+            # Calculate average maintainability index
+            if structures:
+                total_complexity['maintainability_index'] = sum(
+                    s['complexity']['maintainability_index'] for s in structures
+                ) / len(structures)
+            
+            return CodeAnalysis(
                 structures=structures,
                 imports=imports,
-                total_complexity=total_complexity,
-                file_path=file_path
+                total_complexity=total_complexity
             )
             
-        except SyntaxError as e:
-            logger.error(f"Syntax error in {file_path}: {str(e)}")
-            raise
         except Exception as e:
-            logger.error(f"Error analyzing code structure: {str(e)}")
-            raise
+            logger.error(f"Failed to analyze code: {str(e)}")
+            raise ValueError(f"Code analysis failed: {str(e)}")
     
-    def _analyze_imports(self, tree: ast.AST) -> List[str]:
-        """Analyze import statements"""
+    def _find_imports(self, tree: ast.AST) -> List[str]:
+        """Find all imports in the code"""
         imports = []
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -95,12 +111,10 @@ class CodeStructureService:
                 imports.extend(f"{module}.{alias.name}" for alias in node.names)
         return imports
     
-    def _analyze_node(self, node: ast.AST) -> StructureInfo:
+    def _analyze_node(self, node: Union[ast.ClassDef, ast.FunctionDef]) -> StructureInfo:
         """Analyze a class or function node"""
         name = node.name
         node_type = 'class' if isinstance(node, ast.ClassDef) else 'function'
-        
-        # Get line numbers
         start_line = node.lineno
         end_line = self._get_end_line(node)
         
@@ -110,8 +124,14 @@ class CodeStructureService:
         # Get dependencies (calls and attributes)
         dependencies = self._find_dependencies(node)
         
-        # Get docstring
+        # Get docstring and analyze documentation
         docstring = ast.get_docstring(node)
+        
+        # Check API stability
+        api_stability = self._check_api_stability(node)
+        
+        # Detect code smells
+        code_smells = self._detect_code_smells(node)
         
         logger.debug(f"Analyzed {node_type} {name}: complexity={complexity}")
         
@@ -122,33 +142,42 @@ class CodeStructureService:
             'end_line': end_line,
             'complexity': complexity,
             'dependencies': dependencies,
-            'docstring': docstring
+            'docstring': docstring,
+            'api_stability': api_stability,
+            'code_smells': code_smells
         }
     
-    def _calculate_complexity(self, node: ast.AST) -> ComplexityMetrics:
+    def _calculate_complexity(self, node: Union[ast.ClassDef, ast.FunctionDef]) -> ComplexityMetrics:
         """Calculate complexity metrics for a node"""
         cyclomatic = 1  # Base complexity
         cognitive = 0
-        max_depth = 0
         current_depth = 0
+        max_depth = 0
         
         for child in ast.walk(node):
-            # Increase cyclomatic complexity for control flow statements
-            if isinstance(child, (ast.If, ast.For, ast.While, ast.ExceptHandler)):
+            if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor, ast.Try, ast.ExceptHandler)):
                 cyclomatic += 1
-            
-            # Calculate cognitive complexity
-            if isinstance(child, (ast.If, ast.For, ast.While)):
                 cognitive += (1 + current_depth)
                 current_depth += 1
                 max_depth = max(max_depth, current_depth)
+            elif isinstance(child, ast.Break):
+                cognitive += current_depth
             else:
                 current_depth = max(0, current_depth - 1)
+        
+        # Calculate maintainability index
+        maintainability = self._calculate_maintainability_index(node, {
+            'cyclomatic_complexity': cyclomatic,
+            'cognitive_complexity': cognitive,
+            'nesting_depth': max_depth,
+            'maintainability_index': 0.0  # Temporary value
+        })
         
         return {
             'cyclomatic_complexity': cyclomatic,
             'cognitive_complexity': cognitive,
-            'nesting_depth': max_depth
+            'nesting_depth': max_depth,
+            'maintainability_index': maintainability
         }
     
     def _find_dependencies(self, node: ast.AST) -> List[str]:
@@ -159,7 +188,9 @@ class CodeStructureService:
                 if isinstance(child.func, ast.Name):
                     dependencies.add(child.func.id)
                 elif isinstance(child.func, ast.Attribute):
-                    dependencies.add(f"{self._get_attribute_chain(child.func)}")
+                    chain = self._get_attribute_chain(child.func)
+                    if chain:
+                        dependencies.add(chain)
         return list(dependencies)
     
     def _get_attribute_chain(self, node: ast.Attribute) -> str:
@@ -172,6 +203,97 @@ class CodeStructureService:
         if isinstance(current, ast.Name):
             parts.append(current.id)
         return '.'.join(reversed(parts))
+    
+    def _calculate_maintainability_index(self, node: Union[ast.ClassDef, ast.FunctionDef], complexity: ComplexityMetrics) -> float:
+        """Calculate maintainability index based on complexity metrics"""
+        loc = self._get_end_line(node) - node.lineno + 1
+        cc = complexity['cyclomatic_complexity']
+        hv = complexity['cognitive_complexity']
+        
+        if loc == 0 or hv == 0:
+            return 100.0
+            
+        try:
+            mi = 171 - 5.2 * math.log(hv) - 0.23 * cc - 16.2 * math.log(loc)
+            mi = max(0, mi) * 100 / 171
+            return round(mi, 2)
+        except (ValueError, TypeError):
+            return 50.0  # Default moderate maintainability
+            
+    def _check_api_stability(self, node: Union[ast.ClassDef, ast.FunctionDef]) -> APIStabilityInfo:
+        """Check API stability indicators"""
+        is_public = not node.name.startswith('_')
+        has_breaking_changes = False
+        version_info = None
+        
+        # Check docstring for version info
+        docstring = ast.get_docstring(node)
+        if docstring:
+            if ':deprecated:' in docstring.lower():
+                has_breaking_changes = True
+            version_match = re.search(r':version:\s*(\d+\.\d+\.\d+)', docstring)
+            if version_match:
+                version_info = version_match.group(1)
+        
+        return {
+            'is_public': is_public,
+            'has_breaking_changes': has_breaking_changes,
+            'version_info': version_info
+        }
+        
+    def _detect_code_smells(self, node: Union[ast.ClassDef, ast.FunctionDef]) -> Sequence[CodeSmell]:
+        """Detect various code smells in the node"""
+        smells: List[CodeSmell] = []
+        
+        # Check function/method length
+        loc = self._get_end_line(node) - node.lineno + 1
+        if loc > 50:
+            smells.append({
+                'type': 'long_function',
+                'description': f'Function is too long ({loc} lines)',
+                'severity': 'medium',
+                'location': f'Line {node.lineno}'
+            })
+            
+        # Check parameter count for functions
+        if isinstance(node, ast.FunctionDef) and len(node.args.args) > 5:
+            smells.append({
+                'type': 'too_many_parameters',
+                'description': f'Function has too many parameters ({len(node.args.args)})',
+                'severity': 'medium',
+                'location': f'Line {node.lineno}'
+            })
+            
+        # Check for missing docstring
+        if not ast.get_docstring(node) and not node.name.startswith('_'):
+            smells.append({
+                'type': 'missing_documentation',
+                'description': 'Public function/class missing docstring',
+                'severity': 'low',
+                'location': f'Line {node.lineno}'
+            })
+            
+        # Check for complex conditions
+        for child in ast.walk(node):
+            if isinstance(child, ast.If):
+                condition_complexity = self._calculate_condition_complexity(child.test)
+                if condition_complexity > 3:
+                    smells.append({
+                        'type': 'complex_condition',
+                        'description': f'Complex condition (complexity: {condition_complexity})',
+                        'severity': 'medium',
+                        'location': f'Line {child.lineno}'
+                    })
+                    
+        return smells
+        
+    def _calculate_condition_complexity(self, condition: ast.AST) -> int:
+        """Calculate the complexity of a conditional expression"""
+        complexity = 1
+        for node in ast.walk(condition):
+            if isinstance(node, (ast.And, ast.Or)):
+                complexity += 1
+        return complexity
     
     def _get_end_line(self, node: ast.AST) -> int:
         """Get the end line number of a node"""
