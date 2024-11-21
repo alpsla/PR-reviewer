@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 from services.dependency_service import DependencyService
 from services.code_structure_service import CodeStructureService
+from services.language_detection_service import LanguageDetectionService
 
 class ClaudeService:
     def __init__(self, api_key: str):
@@ -34,13 +35,14 @@ class ClaudeService:
             )
             self.dependency_service = DependencyService()
             self.code_structure_service = CodeStructureService()
+            self.language_detection_service = LanguageDetectionService()
             logger.info("Claude API client initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize Claude API client: {str(e)}")
             self.use_mock = True
             self.init_error = str(e)
     
-    def analyze_pr(self, context: Dict) -> Dict:
+    async def analyze_pr(self, context: Dict) -> Dict:
         """Analyzes PR using Claude API with enhanced error handling"""
         if self.use_mock:
             logger.info("Using mock review service")
@@ -50,6 +52,16 @@ class ClaudeService:
         try:
             # Add dependency and code structure analysis
             if 'files' in context:
+                # Perform language detection
+                logger.info("Running language detection")
+                try:
+                    language_detection = await self.language_detection_service.detectFromContent(context['files'])
+                    context['language_detection'] = language_detection
+                    logger.info(f"Language Determination: Primary language detected: {language_detection['primary']['name']}")
+                except Exception as e:
+                    logger.error(f"Language Determination: Failed to detect languages: {str(e)}")
+                    context['language_detection'] = None
+                
                 logger.info("Running dependency analysis")
                 dependency_analysis = self.dependency_service.analyze_dependencies(context['files'])
                 context['dependency_analysis'] = dependency_analysis
@@ -110,9 +122,17 @@ class ClaudeService:
         structure_analysis = context.get('structure_analysis', {})
         has_metrics = bool(structure_analysis)
         
+        # Get language information from detection results
+        language_detection = context.get('language_detection', {})
+        primary_language = "Unknown"
+        secondary_languages = []
         file_extensions = set()
-        primary_language = "code"
-        if 'files' in context:
+        
+        if language_detection and 'primary' in language_detection:
+            primary_language = language_detection['primary']['name']
+            secondary_languages = [lang['name'] for lang in language_detection.get('secondary', [])]
+        elif 'files' in context:
+            # Fallback to extension-based detection
             for file in context['files']:
                 ext = file['filename'].split('.')[-1] if '.' in file['filename'] else ''
                 if ext:
@@ -125,10 +145,11 @@ class ClaudeService:
     <div class="card mb-3">
         <div class="card-body">
             <ul class="list-unstyled mb-0">
-                <li><i class="bi bi-file-earmark-text"></i> Files Modified: {files_count} ({', '.join(file_extensions) if file_extensions else 'various types'})</li>
+                <li><i class="bi bi-file-earmark-text"></i> Files Modified: {files_count}</li>
                 <li><i class="bi bi-plus-circle"></i> Lines Added: {additions}</li>
                 <li><i class="bi bi-dash-circle"></i> Lines Removed: {deletions}</li>
                 <li><i class="bi bi-code-square"></i> Primary Language: {primary_language}</li>
+                {'<li><i class="bi bi-collection"></i> Other Languages: ' + ', '.join(secondary_languages) + '</li>' if secondary_languages else ''}
             </ul>
         </div>
     </div>

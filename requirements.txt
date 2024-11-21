@@ -50,3 +50,10 @@ gunicorn
 flask-cors
 cairosvg
 pillow
+asgiref
+hypercorn
+fastapi
+uvicorn
+jinja2
+python-multipart
+aiofiles

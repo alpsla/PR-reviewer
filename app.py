@@ -1,7 +1,8 @@
 import os
 import logging
-from flask import Flask, flash, render_template, request, redirect, url_for, session, jsonify
+from aioflask import Flask, flash, render_template, request, redirect, url_for, session, jsonify
 from flask_cors import CORS
+from asgiref.sync import sync_to_async
 from database import db
 from services.github_service import GitHubService
 from services.claude_service import ClaudeService
@@ -131,7 +132,7 @@ def create_app():
             return jsonify({"status": "unhealthy", "message": str(e)}), 500
 
     @app.route('/review', methods=['GET', 'POST'])
-    def review():
+    async def review():
         if request.method == 'GET':
             return redirect(url_for('index'))
             
@@ -171,13 +172,21 @@ def create_app():
             # Analyze with Claude
             logger.info("Analyzing PR with Claude")
             try:
+                # Convert sync methods to async using sync_to_async
+                fetch_files = sync_to_async(github_service.fetch_pr_files)
+                fetch_comments = sync_to_async(github_service.fetch_pr_comments)
+                
+                # Fetch data asynchronously
+                files = await fetch_files(pr_details)
+                comments = await fetch_comments(pr_details)
+                
                 context = {
                     'pr_data': pr_data,
-                    'files': github_service.fetch_pr_files(pr_details),
-                    'comments': github_service.fetch_pr_comments(pr_details)
+                    'files': files,
+                    'comments': comments
                 }
                 
-                review_data = claude_service.analyze_pr(context)
+                review_data = await claude_service.analyze_pr(context)
             except ValueError as e:
                 flash(f'Error analyzing PR: {str(e)}', 'error')
                 return redirect(url_for('index'))

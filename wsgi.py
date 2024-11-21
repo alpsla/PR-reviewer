@@ -1,9 +1,52 @@
-from app import app
 import logging
 import sys
 import os
+from urllib.parse import urlparse
 from sqlalchemy import text
-from flask import request
+from fastapi import FastAPI, Request, Form
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from datetime import datetime
+from pathlib import Path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(pathname)s:%(lineno)d] - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
+# Create FastAPI instance
+app = FastAPI(
+    title="PR Review Assistant",
+    description="GitHub Pull Request review assistant with AI-powered analysis",
+    version="1.0.0"
+)
+
+# Initialize paths
+static_path = Path(__file__).parent / "static"
+templates_path = Path(__file__).parent / "templates"
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
+# Initialize templates after static files
+templates = Jinja2Templates(directory=str(templates_path))
+templates.env.globals.update({
+    'url_for': lambda name, path=None: app.url_path_for(name, path=path) if name == 'static' and path else app.url_path_for(name)
+})
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Configure logging with more detailed format
 logging.basicConfig(
@@ -33,29 +76,53 @@ def verify_environment():
 def test_database_connection():
     """Test database connection"""
     try:
-        with application.app_context():
-            from database import db
-            db.session.execute(text('SELECT 1'))
-            db.session.commit()
-            logger.info("Database connection test successful")
-            return True
-    except Exception as e:
+        from sqlalchemy import create_engine
+        from sqlalchemy.exc import SQLAlchemyError
+        
+        db_url = os.environ.get("DATABASE_URL")
+        if not db_url:
+            raise ValueError("DATABASE_URL environment variable is not set")
+            
+        # Parse the URL to handle any special characters
+        parsed = urlparse(db_url)
+        if parsed.scheme == "postgres":
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
+            
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            conn.execute(text('SELECT 1'))
+            conn.commit()
+            
+        logger.info("Database connection test successful")
+        return True
+    except SQLAlchemyError as e:
         logger.error(f"Database connection test failed: {str(e)}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error testing database connection: {str(e)}")
         return False
 
 def test_service_initialization():
     """Test service initialization"""
     try:
-        with application.app_context():
-            from services.github_service import GitHubService
-            from services.claude_service import ClaudeService
-            
-            github_service = GitHubService(os.environ.get('GITHUB_TOKEN', ''))
-            claude_service = ClaudeService(os.environ.get('CLAUDE_API_KEY', ''))
-            
-            if github_service and claude_service:
-                logger.info("Service initialization test successful")
-                return True
+        from services.github_service import GitHubService
+        from services.claude_service import ClaudeService
+        
+        github_token = os.environ.get('GITHUB_TOKEN')
+        claude_api_key = os.environ.get('CLAUDE_API_KEY')
+        
+        if not github_token:
+            raise ValueError("GITHUB_TOKEN environment variable is not set")
+        if not claude_api_key:
+            raise ValueError("CLAUDE_API_KEY environment variable is not set")
+        
+        github_service = GitHubService(github_token)
+        claude_service = ClaudeService(claude_api_key)
+        
+        if github_service and claude_service:
+            logger.info("Service initialization test successful")
+            return True
+        return False
     except Exception as e:
         logger.error(f"Service initialization test failed: {str(e)}")
         return False
@@ -131,12 +198,20 @@ class HealthLoggingMiddleware:
             
         return response
 
-# Wrap application with middleware
-application.wsgi_app = HealthLoggingMiddleware(application.wsgi_app)
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-if __name__ == "__main__":
+@app.on_event("startup")
+async def startup_event():
+    """Startup event handler for FastAPI"""
     try:
-        logger.info("=== Starting PR Review Assistant (Development Mode) ===")
+        logger.info("=== Starting PR Review Assistant ===")
         
         if not verify_environment():
             raise RuntimeError("Environment verification failed")
@@ -147,10 +222,125 @@ if __name__ == "__main__":
         if not test_service_initialization():
             raise RuntimeError("Service initialization test failed")
             
-        port = int(os.environ.get("PORT", 5000))
-        logger.info(f"Development server starting on port {port}")
-        application.run(host="0.0.0.0", port=port)
+        logger.info("All startup checks passed successfully")
         
     except Exception as e:
         logger.error(f"Failed to start application: {str(e)}")
-        sys.exit(1)
+        raise
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    """Home page"""
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if not github_token:
+        return templates.TemplateResponse(
+            "index.html", 
+            {
+                "request": request,
+                "error": "GitHub token is not configured. Some features may be limited."
+            }
+        )
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.post("/review", response_class=HTMLResponse)
+async def review(request: Request, pr_url: str = Form(...)):
+    """Review PR"""
+    try:
+        # Parse PR URL
+        from utils.pr_parser import parse_pr_url
+        pr_details = parse_pr_url(pr_url)
+        if not pr_details:
+            logger.error("Invalid PR URL format")
+            return templates.TemplateResponse(
+                "index.html",
+                {"request": request, "error": "Invalid PR URL format"}
+            )
+
+        # Initialize services
+        github_token = os.environ.get("GITHUB_TOKEN")
+        claude_api_key = os.environ.get("CLAUDE_API_KEY")
+
+        if not github_token or not claude_api_key:
+            return templates.TemplateResponse(
+                "index.html",
+                {"request": request, "error": "Missing API credentials"}
+            )
+
+        from services.github_service import GitHubService
+        from services.claude_service import ClaudeService
+        
+        github_service = GitHubService(github_token)
+        claude_service = ClaudeService(claude_api_key)
+
+        # Fetch PR data
+        pr_data = github_service.fetch_pr_data(pr_details)
+        files = await github_service.fetch_pr_files(pr_details)
+        comments = await github_service.fetch_pr_comments(pr_details)
+
+        # Initialize code structure service
+        from services.code_structure_service import CodeStructureService
+        code_structure_service = CodeStructureService()
+
+        # Analyze code structure
+        structure_analysis = {}
+        for file in files:
+            try:
+                analysis = code_structure_service.analyze_code(
+                    file.get('content', ''),
+                    file['filename']
+                )
+                structure_analysis[file['filename']] = {
+                    'structures': analysis.structures,
+                    'imports': analysis.imports,
+                    'total_complexity': analysis.total_complexity
+                }
+            except Exception as e:
+                logger.error(f"Error analyzing {file['filename']}: {str(e)}")
+
+        # Prepare context for Claude analysis
+        context = {
+            'pr_data': pr_data,
+            'files': files,
+            'comments': comments,
+            'structure_analysis': structure_analysis
+        }
+        
+        review_data = await claude_service.analyze_pr(context)
+
+        return templates.TemplateResponse(
+            "review.html",
+            {
+                "request": request,
+                "review": review_data,
+                "pr_url": pr_url,
+                "current_time": datetime.utcnow()
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error processing review: {str(e)}")
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "error": str(e)}
+        )
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    try:
+        # Test database connection
+        from database import db
+        with db.session() as session:
+            session.execute(text('SELECT 1'))
+        return JSONResponse({"status": "healthy", "message": "Service is running"})
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return JSONResponse(
+            {"status": "unhealthy", "message": str(e)},
+            status_code=500
+        )
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 5000))
+    uvicorn.run("wsgi:app", host="0.0.0.0", port=port, reload=True)
