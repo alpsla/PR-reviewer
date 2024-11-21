@@ -20,37 +20,63 @@ class DependencyService:
     def analyze_dependencies(self, files: List[Dict]) -> Dict:
         """Analyze dependencies in the provided files"""
         try:
+            logger.info("Code Structure Analysis: Starting dependency analysis")
+            total_files = len(files)
+            logger.info(f"Code Structure Analysis: Found {total_files} files to analyze")
+            
             # Create temporary directory for analysis
             self.temp_dir = tempfile.mkdtemp()
+            logger.info("Code Structure Analysis: Created temporary directory for analysis")
             
-            # Write files to temporary directory
-            self._write_files_to_temp(files)
+            try:
+                # Write files to temporary directory with progress tracking
+                processed_files = 0
+                for file in files:
+                    try:
+                        filename = file.get('filename', '')
+                        if not filename:
+                            continue
+                            
+                        processed_files += 1
+                        progress = (processed_files / total_files) * 100
+                        logger.info(f"Code Structure Analysis: Processing file {processed_files}/{total_files} ({progress:.1f}%): {filename}")
+                        
+                        self._write_files_to_temp([file])
+                    except Exception as e:
+                        logger.error(f"Code Structure Analysis: Error processing {filename}: {str(e)}")
+                
+                # Run dependency analysis
+                logger.info("Code Structure Analysis: Running dependency-cruiser analysis")
+                dep_cruiser_result = self._run_dependency_cruiser()
+                
+                logger.info("Code Structure Analysis: Running madge analysis")
+                madge_result = self._run_madge()
+                
+                # Process and combine results
+                logger.info("Code Structure Analysis: Processing analysis results")
+                analysis_result = self._process_results(dep_cruiser_result, madge_result)
+                
+                logger.info("Code Structure Analysis: Analysis completed successfully")
+                return analysis_result
+                
+            except Exception as e:
+                logger.error(f"Code Structure Analysis: Failed to analyze dependencies: {str(e)}")
+                return {
+                    'error': str(e),
+                    'dependency_graph': None,
+                    'circular_dependencies': [],
+                    'external_dependencies': []
+                }
             
-            # Run dependency analysis
-            dep_cruiser_result = self._run_dependency_cruiser()
-            madge_result = self._run_madge()
-            
-            # Process and combine results
-            analysis_result = self._process_results(dep_cruiser_result, madge_result)
-            
-            return analysis_result
-            
-        except Exception as e:
-            logger.error(f"Failed to analyze dependencies: {str(e)}")
-            return {
-                'error': str(e),
-                'dependency_graph': None,
-                'circular_dependencies': [],
-                'external_dependencies': []
-            }
         finally:
             # Cleanup temporary directory
             if self.temp_dir and os.path.exists(self.temp_dir):
                 try:
                     import shutil
                     shutil.rmtree(self.temp_dir)
+                    logger.info("Code Structure Analysis: Cleaned up temporary directory")
                 except Exception as e:
-                    logger.error(f"Failed to cleanup temp directory: {str(e)}")
+                    logger.error(f"Code Structure Analysis: Failed to cleanup temp directory: {str(e)}")
     
     def _write_files_to_temp(self, files: List[Dict]) -> None:
         """Write PR files to temporary directory with filtering"""
@@ -114,9 +140,18 @@ class DependencyService:
         """Run dependency-cruiser analysis with improved error handling"""
         try:
             logger.info("Configuring dependency-cruiser analysis")
-            # Initialize depcruise config with expanded options
+            # Custom dependency-cruiser configuration
             config = {
-                "extends": "dependency-cruiser/configs/recommended-strict",
+                "forbidden": [
+                    {
+                        "name": "no-circular",
+                        "severity": "error",
+                        "from": {},
+                        "to": {
+                            "circular": "true"
+                        }
+                    }
+                ],
                 "options": {
                     "doNotFollow": {
                         "path": "node_modules",
@@ -128,12 +163,22 @@ class DependencyService:
                             "npm-bundled"
                         ]
                     },
-                    "exclude": "(\\.spec\\.js$|\\.test\\.js$|\\.config\\.js$|\\.replit$|package\\.json$)",
+                    "exclude": "\\.(spec|test|config)\\.(js|ts|jsx|tsx)$|\\.(replit|json|md|txt|svg)$",
                     "maxDepth": 6,
-                    "includeOnly": "\\.(js|jsx|ts|tsx)$",
+                    "includeOnly": "\\.(js|jsx|ts|tsx|py)$",
+                    "moduleSystems": ["amd", "cjs", "es6", "tsd"],
+                    "tsConfig": null,
+                    "tsPreCompilationDeps": "true",
+                    "preserveSymlinks": "false",
+                    "webpackConfig": null,
                     "enhancedResolveOptions": {
                         "exportsFields": ["exports"],
-                        "conditionNames": ["import", "require", "node", "default"]
+                        "conditionNames": ["import", "require", "node", "default"],
+                        "extensions": [".js", ".jsx", ".ts", ".tsx", ".py"]
+                    },
+                    "cache": {
+                        "enabled": "true",
+                        "strategy": "metadata"
                     }
                 }
             }
@@ -164,18 +209,6 @@ class DependencyService:
                     
             except Exception as e:
                 logger.error(f"Failed to run dependency-cruiser: {str(e)}")
-                return None
-                result = subprocess.run(
-                ['npx', 'depcruise', '--config', '.dependency-cruiser.json', '--output-type', 'json', '.'],
-                cwd=self.temp_dir,
-                capture_output=True,
-                text=True
-            )
-            
-            if result.returncode == 0:
-                return json.loads(result.stdout)
-            else:
-                logger.error(f"dependency-cruiser failed: {result.stderr}")
                 return None
                 
         except Exception as e:
