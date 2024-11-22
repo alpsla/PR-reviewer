@@ -259,15 +259,21 @@ class ClaudeService:
         
         if has_metrics:
             for filename, analysis in structure_analysis.items():
-                total = analysis.get('total_complexity', {})
+                total = analysis.get('total_complexity', ComplexityMetrics())
+                total_dict = {
+                    'cyclomatic_complexity': total.cyclomatic_complexity,
+                    'cognitive_complexity': total.cognitive_complexity,
+                    'nesting_depth': total.nesting_depth,
+                    'maintainability_index': total.maintainability_index
+                }
                 mock_response += f"""
                 <li class="mb-3">
                     <strong>{filename}</strong>
                     <ul class="list-unstyled ps-3">
-                        <li><i class="bi bi-graph-up"></i> Cyclomatic Complexity: {total.get('cyclomatic_complexity', 'N/A')}</li>
-                        <li><i class="bi bi-brain"></i> Cognitive Complexity: {total.get('cognitive_complexity', 'N/A')}</li>
-                        <li><i class="bi bi-diagram-2"></i> Nesting Depth: {total.get('nesting_depth', 'N/A')}</li>
-                        <li><i class="bi bi-speedometer2"></i> Maintainability Index: {total.get('maintainability_index', 'N/A'):.1f}</li>
+                        <li><i class="bi bi-graph-up"></i> Cyclomatic Complexity: {total_dict['cyclomatic_complexity']}</li>
+                        <li><i class="bi bi-brain"></i> Cognitive Complexity: {total_dict['cognitive_complexity']}</li>
+                        <li><i class="bi bi-diagram-2"></i> Nesting Depth: {total_dict['nesting_depth']}</li>
+                        <li><i class="bi bi-speedometer2"></i> Maintainability Index: {total_dict['maintainability_index']:.1f}</li>
                     </ul>
                 </li>"""
         else:
@@ -613,26 +619,50 @@ Structure your response using HTML with Bootstrap classes:
                 content = response.get('content', '') if isinstance(response, dict) else str(response)
             
             # Clean up response content
-            content = re.sub(r"^Here's the code review feedback structured with HTML and Bootstrap classes:?\s*", "", content, flags=re.IGNORECASE).strip()
+            content = re.sub(r"^Here's the code review feedback.*?:\s*", "", content, flags=re.IGNORECASE).strip()
             content = re.sub(r'```html\s*|\s*```$', '', content, flags=re.IGNORECASE).strip()
             
-            # Validate HTML structure
+            # Ensure proper HTML structure
             if not ('<div' in content and '</div>' in content):
-                logger.warning("Response doesn't contain expected HTML structure")
-                raise ValueError("Invalid response format: missing HTML structure")
+                logger.warning("Adding HTML structure to response")
+                content = f'''
+                <div class="code-review">
+                    <div class="review-section">
+                        {content}
+                    </div>
+                </div>
+                '''
             
+            # Basic HTML validation
+            if not content.strip():
+                raise ValueError("Empty content after parsing")
+                
             # Log successful parsing
             logger.info("Successfully parsed Claude response")
             
             return {
                 'summary': content,
                 'structured': True,
-                'is_mock': False
+                'is_mock': False,
+                'format': 'html'
             }
             
         except (AttributeError, IndexError) as e:
             logger.error(f"Failed to parse Claude response structure: {str(e)}")
-            raise ValueError(f"Invalid response structure: {str(e)}")
+            # Return unstructured text as fallback
+            return {
+                'summary': str(response),
+                'structured': False,
+                'is_mock': False,
+                'format': 'text',
+                'error': str(e)
+            }
         except Exception as e:
             logger.error(f"Unexpected error parsing Claude response: {str(e)}")
-            raise ValueError(f"Failed to parse response: {str(e)}")
+            return {
+                'summary': "Failed to parse review response. Please try again.",
+                'structured': False,
+                'is_mock': True,
+                'format': 'text',
+                'error': str(e)
+            }
