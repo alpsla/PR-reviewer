@@ -22,10 +22,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def verify_github_token(token: Optional[str]) -> tuple[bool, str]:
+    """Verify GitHub token permissions with detailed feedback"""
+    if not token:
+        return False, "GitHub token not found in environment variables"
+    
+    try:
+        # Initialize service to test token
+        github_service = GitHubService(token)
+        if github_service.token_valid:
+            return True, "Token verified successfully"
+        return False, "Token validation failed"
+    except Exception as e:
+        return False, f"Unexpected error validating token: {str(e)}"
+
 def create_app():
     # Initialize Flask app
     app = Flask(__name__)
-    CORS(app)  # Enable CORS for all routes
+    CORS(app)
     app.secret_key = os.environ.get("FLASK_SECRET_KEY", "pr_review_assistant_secret")
 
     # Configure PostgreSQL database
@@ -43,25 +57,22 @@ def create_app():
         app.config["SQLALCHEMY_DATABASE_URI"] = db_url
         app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-            "pool_pre_ping": True,  # Enable connection health checks
-            "pool_recycle": 300,    # Recycle connections every 5 minutes
+            "pool_pre_ping": True,
+            "pool_recycle": 300,
             "connect_args": {
-                "connect_timeout": 10  # Connection timeout in seconds
+                "connect_timeout": 10
             }
         }
 
-        # Initialize database with proper error handling
+        # Initialize database
         logger.info("Initializing database connection...")
         db.init_app(app)
         
-        # Import models after db initialization to avoid circular imports
         from models import Review
         
-        # Create database tables
         with app.app_context():
             try:
                 db.create_all()
-                # Verify connection with a simple query
                 db.session.execute(text('SELECT 1'))
                 db.session.commit()
                 logger.info("Database tables created/verified successfully")
@@ -73,49 +84,38 @@ def create_app():
         logger.error(f"Failed to initialize database: {str(e)}")
         raise
 
-    # Initialize services with proper type handling
+    # Initialize services
     github_token: Optional[str] = os.environ.get("GITHUB_TOKEN")
     claude_api_key: Optional[str] = os.environ.get("CLAUDE_API_KEY")
-
-    def verify_github_token(token: Optional[str]) -> tuple[bool, str]:
-        """Verify GitHub token permissions"""
-        if not token:
-            return False, "GitHub token not found"
-        
-        try:
-            # Try to decode token to check structure (won't work with new fine-grained tokens)
-            try:
-                decoded = jwt.decode(token, options={"verify_signature": False})
-                scopes = decoded.get('scopes', [])
-                if not ('repo' in scopes or 'public_repo' in scopes):
-                    return False, "Token missing required permissions (repo or public_repo scope)"
-            except jwt.InvalidTokenError:
-                # Token might be a fine-grained token, proceed with service initialization
-                pass
-            
-            # Test token by initializing service
-            github_service = GitHubService(token)
-            return True, "Token verified successfully"
-        except Exception as e:
-            return False, f"Token verification failed: {str(e)}"
 
     if not github_token:
         logger.warning("GitHub token not found in environment variables")
     else:
         token_valid, token_message = verify_github_token(github_token)
         if not token_valid:
-            logger.error(f"GitHub token validation failed: {token_message}")
+            logger.warning(f"GitHub token validation failed: {token_message}")
         else:
             logger.info("GitHub token validated successfully")
 
     if not claude_api_key:
         logger.warning("Claude API key not found in environment variables")
 
-    github_service = GitHubService(github_token if github_token else "")
-    claude_service = ClaudeService(claude_api_key if claude_api_key else "")
+    # Initialize services without failing startup
+    try:
+        github_service = GitHubService(github_token if github_token else "")
+        claude_service = ClaudeService(claude_api_key if claude_api_key else "")
+    except Exception as e:
+        logger.error(f"Error initializing services: {str(e)}")
+        github_service = None
+        claude_service = None
 
     @app.route('/', methods=['GET'])
     def index():
+        # Show warning if GitHub token is not configured
+        if not github_token:
+            flash('GitHub token is not configured. Some features may be limited.', 'warning')
+        elif github_service and not github_service.token_valid:
+            flash('GitHub token validation failed. Some features may be limited.', 'warning')
         return render_template('index.html')
 
     @app.route('/health', methods=['GET'])
@@ -130,8 +130,11 @@ def create_app():
             logger.error(f"Health check failed: {str(e)}")
             return jsonify({"status": "unhealthy", "message": str(e)}), 500
 
-    @app.route('/review', methods=['POST'])
+    @app.route('/review', methods=['GET', 'POST'])
     def review():
+        if request.method == 'GET':
+            return redirect(url_for('index'))
+            
         pr_url = request.form.get('pr_url')
         if not pr_url:
             flash('Please provide a PR URL', 'error')
@@ -149,7 +152,7 @@ def create_app():
 
             # Verify GitHub token before proceeding
             if not github_token:
-                flash('GitHub token is not configured. Please contact administrator.', 'error')
+                flash('GitHub token is not configured. Please check environment variables.', 'error')
                 return redirect(url_for('index'))
             
             token_valid, token_message = verify_github_token(github_token)
@@ -158,18 +161,26 @@ def create_app():
                 return redirect(url_for('index'))
 
             # Fetch PR data
-            logger.info("Fetching PR data from GitHub")
-            pr_data = github_service.fetch_pr_data(pr_details)
+            try:
+                logger.info("Fetching PR data from GitHub")
+                pr_data = github_service.fetch_pr_data(pr_details)
+            except ValueError as e:
+                flash(f'Error accessing PR: {str(e)}', 'error')
+                return redirect(url_for('index'))
             
             # Analyze with Claude
             logger.info("Analyzing PR with Claude")
-            context = {
-                'pr_data': pr_data,
-                'files': github_service.fetch_pr_files(pr_details),
-                'comments': github_service.fetch_pr_comments(pr_details)
-            }
-            
-            review_data = claude_service.analyze_pr(context)
+            try:
+                context = {
+                    'pr_data': pr_data,
+                    'files': github_service.fetch_pr_files(pr_details),
+                    'comments': github_service.fetch_pr_comments(pr_details)
+                }
+                
+                review_data = claude_service.analyze_pr(context)
+            except ValueError as e:
+                flash(f'Error analyzing PR: {str(e)}', 'error')
+                return redirect(url_for('index'))
             
             # Store review data in session for save/comment actions
             session['pr_details'] = pr_details
@@ -247,25 +258,30 @@ def create_app():
             review_data = session['review_data']
             pr_details = session['pr_details']
             
-            # Post comment to GitHub
-            comment_result = github_service.post_pr_comment(
-                pr_details,
-                review_data['summary']
-            )
-            
-            # Update review record if exists
-            if session.get('saved_review_id'):
-                review = Review.query.get(session['saved_review_id'])
-                if review:
-                    review.github_comment_id = comment_result['id']
-                    db.session.commit()
-            
-            logger.info(f"Comment posted successfully to PR: {pr_details}")
-            return jsonify({
-                'message': 'Comment posted successfully',
-                'comment_url': comment_result['url']
-            }), 200
-            
+            try:
+                # Post comment to GitHub
+                comment_result = github_service.post_pr_comment(
+                    pr_details,
+                    review_data['summary']
+                )
+                
+                # Update review record if exists
+                if session.get('saved_review_id'):
+                    review = Review.query.get(session['saved_review_id'])
+                    if review:
+                        review.github_comment_id = comment_result['id']
+                        db.session.commit()
+                
+                logger.info(f"Comment posted successfully to PR: {pr_details}")
+                return jsonify({
+                    'message': 'Comment posted successfully',
+                    'comment_url': comment_result['url']
+                }), 200
+                
+            except ValueError as e:
+                logger.error(f"Failed to post comment: {str(e)}")
+                return jsonify({'error': str(e)}), 403
+                
         except Exception as e:
             logger.error(f"Error posting comment: {str(e)}")
             return jsonify({'error': str(e)}), 500

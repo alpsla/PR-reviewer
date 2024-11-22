@@ -41,11 +41,8 @@
                         {% endif %}
                     </small>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-success" onclick="saveReview()">
-                            <i class="bi bi-save me-2"></i>Save
-                        </button>
-                        <button type="button" class="btn btn-primary" onclick="postComment()">
-                            <i class="bi bi-chat-text me-2"></i>Comment
+                        <button type="button" class="btn btn-primary" onclick="showExportModal()">
+                            <i class="bi bi-box-arrow-up me-2"></i>Export Report
                         </button>
                     </div>
                 </div>
@@ -58,44 +55,127 @@
     </div>
 </div>
 
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Export Review Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-grid gap-3">
+                    <button class="btn btn-outline-primary d-flex align-items-center p-3" onclick="copyToClipboard()">
+                        <i class="bi bi-clipboard me-3 fs-4"></i>
+                        <div class="text-start">
+                            <div class="fw-semibold">Copy to Clipboard</div>
+                            <small class="text-muted">Copy formatted report for pasting</small>
+                        </div>
+                    </button>
+                    
+                    <button class="btn btn-outline-primary d-flex align-items-center p-3" onclick="downloadMarkdown()">
+                        <i class="bi bi-download me-3 fs-4"></i>
+                        <div class="text-start">
+                            <div class="fw-semibold">Download as Markdown</div>
+                            <small class="text-muted">Save report to your device</small>
+                        </div>
+                    </button>
+                    
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <h6 class="card-title">Want to comment on GitHub?</h6>
+                            <ol class="ps-3 mb-0">
+                                <li>
+                                    <a href="{{ pr_url }}" target="_blank" class="text-primary d-inline-flex align-items-center">
+                                        Open PR in GitHub
+                                        <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                </li>
+                                <li>Copy review feedback (from above)</li>
+                                <li>Paste into GitHub PR comment</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% block extra_css %}
 <style>
+    /* Review section title styling */
     .review-section h3 {
-        background-color: rgba(59, 130, 246, 0.1);
         padding: 0.75rem 1rem;
         border-radius: 0.5rem;
         margin-bottom: 1rem;
-        color: var(--primary-color);
         font-weight: 600;
     }
 
     [data-bs-theme="light"] .review-section h3 {
         background-color: rgba(37, 99, 235, 0.1);
+        color: #1F2937 !important;
+    }
+
+    [data-bs-theme="dark"] .review-section h3 {
+        background-color: rgba(59, 130, 246, 0.2);
+        color: #F9FAFB !important;
+    }
+
+    /* Strengthen selectors for text colors */
+    [data-bs-theme="light"] .review-section li,
+    [data-bs-theme="light"] .review-content,
+    [data-bs-theme="light"] .review-section,
+    [data-bs-theme="light"] .review-section h4,
+    [data-bs-theme="light"] .review-section p {
+        color: var(--text-primary) !important;
+    }
+
+    [data-bs-theme="light"] .text-muted,
+    [data-bs-theme="light"] .review-section .text-muted {
+        color: var(--text-secondary) !important;
+    }
+
+    /* Export Modal Light Mode Styling */
+    [data-bs-theme="light"] .modal-content {
+        color: var(--text-primary);
+    }
+
+    [data-bs-theme="light"] .modal-title {
+        color: var(--text-primary);
+    }
+
+    [data-bs-theme="light"] .btn-outline-primary {
         color: var(--primary-color);
     }
 
+    [data-bs-theme="light"] .modal-body .card-title,
+    [data-bs-theme="light"] .modal-body .card-body {
+        color: var(--text-primary);
+    }
+
+    /* Ensure icon colors remain visible */
+    .review-section .bi-check-circle { color: #10B981 !important; }
+    .review-section .bi-exclamation-triangle { color: #F59E0B !important; }
+    .review-section .bi-exclamation-circle { color: #EF4444 !important; }
+    .review-section .bi-shield-exclamation { color: #8B5CF6 !important; }
+    .review-section .bi-speedometer2 { color: #3B82F6 !important; }
+    .review-section .bi-lightning-charge { color: #F59E0B !important; }
+    .review-section .bi-graph-up { color: #10B981 !important; }
+    .review-section .bi-database-check { color: #6366F1 !important; }
+
     .review-section .bi {
+        display: inline-block;
         font-size: 1.25rem;
         margin-right: 0.75rem;
         vertical-align: -0.125rem;
     }
-
-    /* Update icon colors */
-    .review-section .bi-check-circle { color: #10B981; }
-    .review-section .bi-exclamation-triangle { color: #F59E0B; }
-    .review-section .bi-exclamation-circle { color: #EF4444; }
-    .review-section .bi-shield-exclamation { color: #8B5CF6; }
-    .review-section .bi-speedometer2 { color: #3B82F6; }
-    .review-section .bi-lightning-charge { color: #F59E0B; }
-    .review-section .bi-graph-up { color: #10B981; }
-    .review-section .bi-database-check { color: #6366F1; }
 
     /* List item styling */
     .review-section li {
         display: flex;
         align-items: center;
         margin-bottom: 0.5rem;
-        color: var(--text-primary);
     }
 
     /* Card styling */
@@ -108,11 +188,6 @@
         padding: 1.5rem;
         background-color: var(--card-bg);
         border-top: 1px solid rgba(156, 163, 175, 0.2);
-    }
-
-    [data-bs-theme="light"] .card-footer {
-        background-color: var(--card-bg);
-        border-color: rgba(0, 0, 0, 0.1);
     }
 
     /* Button styling */
@@ -128,24 +203,6 @@
         color: #ffffff;
     }
 
-    /* Additional styles for better theme support */
-    [data-bs-theme="light"] .review-content,
-    [data-bs-theme="light"] .review-section,
-    [data-bs-theme="light"] .review-section ul li,
-    [data-bs-theme="light"] .card-header h4,
-    [data-bs-theme="light"] .text-muted {
-        color: var(--text-primary) !important;
-    }
-
-    .review-section {
-        margin-bottom: 1.5rem;
-    }
-
-    .review-section:last-child {
-        margin-bottom: 0;
-    }
-
-    /* Button hover effects */
     .btn {
         transition: all 0.2s ease-in-out;
     }
@@ -157,6 +214,27 @@
 
     .btn:active {
         transform: translateY(1px);
+    }
+
+    /* Modal styling */
+    .modal-content {
+        background-color: var(--card-bg);
+        border: 1px solid rgba(156, 163, 175, 0.2);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(156, 163, 175, 0.2);
+    }
+
+    .btn-outline-primary {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    .btn-outline-primary:hover {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: #ffffff;
     }
 </style>
 {% endblock %}

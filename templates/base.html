@@ -50,41 +50,24 @@
             border-color: #e5e7eb;
         }
 
-        [data-bs-theme="light"] footer {
-            background-color: #f8f9fa;
-            border-color: #e5e7eb;
-        }
-
-        [data-bs-theme="light"] .btn-primary,
-        [data-bs-theme="light"] .btn-success {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            color: #ffffff;
-        }
-
-        [data-bs-theme="light"] .btn-primary:hover,
-        [data-bs-theme="light"] .btn-success:hover {
-            background-color: var(--primary-hover);
-            border-color: var(--primary-hover);
-            color: #ffffff;
-        }
-
-        [data-bs-theme="light"] .btn-success {
-            background-color: #10B981;
-            border-color: #10B981;
-        }
-
-        [data-bs-theme="light"] .btn-success:hover {
-            background-color: #059669;
-            border-color: #059669;
-        }
-
         body {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             transition: background-color 0.3s ease;
             background-color: var(--dark-bg);
+        }
+
+        /* Main content wrapper */
+        .content-wrapper {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        main {
+            flex: 1 0 auto;
+            padding-bottom: 2rem;
         }
 
         .navbar {
@@ -161,14 +144,26 @@
             transition: border-color 0.3s ease;
         }
 
-        footer {
+        /* Footer styling */
+        .footer {
+            flex-shrink: 0;
+            width: 100%;
             background-color: var(--card-bg);
             border-top: 1px solid rgba(156, 163, 175, 0.2);
             padding: 1rem 0;
+            margin-top: auto;
         }
 
-        [data-bs-theme="light"] footer .text-muted {
-            color: var(--text-secondary) !important;
+        .footer-content {
+            color: var(--text-primary) !important;
+        }
+
+        [data-bs-theme="light"] .footer-content {
+            color: #1F2937 !important;  /* Darker text for light mode */
+        }
+
+        [data-bs-theme="dark"] .footer-content {
+            color: #F9FAFB !important;  /* Light text for dark mode */
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -227,32 +222,36 @@
         </div>
     </nav>
 
-    <div class="d-flex flex-column min-vh-100">
-        <main class="flex-grow-1 container d-flex align-items-center justify-content-center">
-            <div class="w-100">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
-                                {% if category == 'error' %}
-                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                {% elif category == 'success' %}
-                                    <i class="bi bi-check-circle-fill me-2"></i>
-                                {% endif %}
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
+    <div class="content-wrapper">
+        <main class="container py-5 mt-5" style="min-height: calc(100vh - 200px); display: flex; align-items: center;">
+            <div class="d-flex justify-content-center align-items-center w-100">
+                <div class="w-100">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                                    {% if category == 'error' %}
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    {% elif category == 'success' %}
+                                        <i class="bi bi-check-circle-fill me-2"></i>
+                                    {% endif %}
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
 
-                {% block content %}{% endblock %}
+                    {% block content %}{% endblock %}
+                </div>
             </div>
         </main>
-
-        <footer class="py-4 border-top">
-            <div class="container text-center">
-                <p class="text-muted mb-0">© 2024 PR Review Assistant. All rights reserved.</p>
+        
+        <footer class="footer mt-auto">
+            <div class="container">
+                <div class="footer-content text-center">
+                    <p class="mb-0">© 2024 PR Review Assistant. All rights reserved.</p>
+                </div>
             </div>
         </footer>
     </div>

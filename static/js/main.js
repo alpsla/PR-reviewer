@@ -7,22 +7,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize form handling
 function initializeForm() {
-    const prForm = document.querySelector('#prForm');
+    const prForm = document.getElementById('prForm');
     if (!prForm) {
-        console.debug('PR form not found - likely on a different page');
+        console.debug('No PR form found on current page');
         return;
     }
     
     const submitBtn = prForm.querySelector('button[type="submit"]');
     const spinner = submitBtn?.querySelector('.spinner-border');
+    const buttonText = submitBtn?.querySelector('.button-text');
     
-    if (submitBtn && spinner) {
-        prForm.addEventListener('submit', function() {
+    if (submitBtn && spinner && buttonText) {
+        prForm.addEventListener('submit', function(e) {
             submitBtn.disabled = true;
             spinner.classList.remove('d-none');
-            submitBtn.innerHTML = '';
-            submitBtn.appendChild(spinner);
-            submitBtn.appendChild(document.createTextNode(' Analyzing...'));
+            buttonText.textContent = 'Analyzing...';
         });
     }
 }
@@ -96,6 +95,43 @@ function toggleTheme() {
     
     // Store preference
     localStorage.setItem('theme', newTheme);
+}
+
+// Show export modal
+function showExportModal() {
+    const modal = new bootstrap.Modal(document.getElementById('exportModal'));
+    modal.show();
+}
+
+// Copy to clipboard function
+async function copyToClipboard() {
+    const reviewContent = document.querySelector('.review-content')?.innerText;
+    if (!reviewContent) return;
+    
+    try {
+        await navigator.clipboard.writeText(reviewContent);
+        showAlert('Review copied to clipboard!', 'success');
+    } catch (error) {
+        showAlert('Failed to copy: ' + error.message, 'error');
+    }
+}
+
+// Download as markdown function
+function downloadMarkdown() {
+    const reviewContent = document.querySelector('.review-content')?.innerText;
+    if (!reviewContent) return;
+    
+    const blob = new Blob([reviewContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pr-review.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showAlert('Review downloaded as Markdown!', 'success');
 }
 
 // Save review function with clipboard functionality
