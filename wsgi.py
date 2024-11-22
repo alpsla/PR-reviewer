@@ -3,11 +3,8 @@ import sys
 import os
 from urllib.parse import urlparse
 from sqlalchemy import text
-from fastapi import FastAPI, Request, Form
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from flask import Flask, request, render_template, jsonify, redirect, url_for
+from flask_cors import CORS
 from datetime import datetime
 from pathlib import Path
 
@@ -19,25 +16,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create FastAPI instance
-app = FastAPI(
-    title="PR Review Assistant",
-    description="GitHub Pull Request review assistant with AI-powered analysis",
-    version="1.0.0"
-)
+# Create Flask instance
+app = Flask(__name__, 
+    static_folder='static',
+    template_folder='templates')
 
-# Initialize paths
-static_path = Path(__file__).parent / "static"
-templates_path = Path(__file__).parent / "templates"
-
-# Mount static files
-app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
-
-# Initialize templates after static files
-templates = Jinja2Templates(directory=str(templates_path))
-templates.env.globals.update({
-    'url_for': lambda name, path=None: app.url_path_for(name, path=path) if name == 'static' and path else app.url_path_for(name)
-})
+# Enable CORS
+CORS(app)
 
 # Add CORS middleware
 app.add_middleware(
@@ -228,22 +213,19 @@ async def startup_event():
         logger.error(f"Failed to start application: {str(e)}")
         raise
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+@app.route("/")
+def index():
     """Home page"""
     github_token = os.environ.get("GITHUB_TOKEN")
     if not github_token:
-        return templates.TemplateResponse(
-            "index.html", 
-            {
-                "request": request,
-                "error": "GitHub token is not configured. Some features may be limited."
-            }
+        return render_template(
+            "index.html",
+            error="GitHub token is not configured. Some features may be limited."
         )
-    return templates.TemplateResponse("index.html", {"request": request})
+    return render_template("index.html")
 
-@app.post("/review", response_class=HTMLResponse)
-async def review(request: Request, pr_url: str = Form(...)):
+@app.route("/review", methods=["POST"])
+def review():
     """Review PR"""
     try:
         # Parse PR URL
@@ -342,8 +324,8 @@ async def review(request: Request, pr_url: str = Form(...)):
             {"request": request, "error": str(e)}
         )
 
-@app.get("/health")
-async def health_check():
+@app.route("/health")
+def health_check():
     """Health check endpoint"""
     try:
         # Test database connection

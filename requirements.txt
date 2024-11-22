@@ -62,3 +62,5 @@ astroid
 lizard
 mypy
 pylint
+docstring-parser
+pydocstyle

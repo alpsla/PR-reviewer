@@ -74,11 +74,14 @@ class ClaudeService:
                             file.get('content', ''),
                             file['filename']
                         )
-                        structure_analysis[file['filename']] = {
-                            'structures': analysis.structures,
-                            'imports': analysis.imports,
-                            'total_complexity': analysis.total_complexity
-                        }
+                        if isinstance(analysis, dict):
+                            structure_analysis[file['filename']] = analysis
+                        else:
+                            structure_analysis[file['filename']] = {
+                                'structures': getattr(analysis, 'structures', []),
+                                'imports': getattr(analysis, 'imports', []),
+                                'total_complexity': getattr(analysis, 'total_complexity', {})
+                            }
                     except Exception as e:
                         logger.error(f"Error analyzing {file['filename']}: {str(e)}")
                 context['structure_analysis'] = structure_analysis
@@ -382,6 +385,42 @@ Structure your response using HTML with Bootstrap classes:
         return formatted
             
     def _format_documentation_analysis(self, analysis: Dict) -> str:
+        """Format documentation analysis results for Claude prompt"""
+        if not analysis:
+            return "Documentation analysis not available"
+            
+        docs = analysis.get('documentation', {})
+        stats = analysis.get('stats', {})
+        
+        formatted = "Documentation Analysis:\n"
+        
+        # Add overall statistics
+        formatted += f"\nOverall Statistics:\n"
+        formatted += f"- Average Coverage: {stats.get('average_coverage', 0)}%\n"
+        formatted += f"- Average Quality: {stats.get('average_quality', 0)}%\n"
+        formatted += f"- Files Analyzed: {stats.get('total_files_analyzed', 0)}\n"
+        
+        # Add per-file details
+        formatted += "\nPer-file Documentation Details:\n"
+        for filename, file_docs in docs.items():
+            if isinstance(file_docs, dict) and 'error' not in file_docs:
+                formatted += f"\n{filename}:\n"
+                formatted += f"- Coverage: {file_docs.get('coverage', 0)}%\n"
+                formatted += f"- Quality Score: {file_docs.get('quality_score', 0)}%\n"
+                
+                # Add class documentation info
+                if file_docs.get('classes'):
+                    formatted += "- Documented Classes:\n"
+                    for class_name, class_info in file_docs['classes'].items():
+                        formatted += f"  • {class_name}: {'Documented' if class_info.get('docstring') else 'Undocumented'}\n"
+                
+                # Add function documentation info
+                if file_docs.get('functions'):
+                    formatted += "- Documented Functions:\n"
+                    for func_name, func_info in file_docs['functions'].items():
+                        formatted += f"  • {func_name}: {'Documented' if func_info.get('docstring') else 'Undocumented'}\n"
+                        
+        return formatted
         """Format documentation analysis results"""
         if not analysis or not isinstance(analysis, dict):
             return "Documentation analysis not available"

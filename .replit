@@ -31,7 +31,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "uvicorn wsgi:app --host 0.0.0.0 --port 5000 --reload"
+args = "python3 main.py"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -49,7 +49,7 @@ task = "shell.exec"
 args = "python3 scripts/generate_favicons.py"
 
 [deployment]
-run = ["sh", "-c", "uvicorn wsgi:app --host 0.0.0.0 --port 5000 --reload"]
+run = ["sh", "-c", "python3 main.py"]
 
 [[ports]]
 localPort = 80
