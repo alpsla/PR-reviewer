@@ -228,25 +228,23 @@ def index():
 def review():
     """Review PR"""
     try:
+        pr_url = request.form.get('pr_url')
+        if not pr_url:
+            return redirect(url_for('index', error="PR URL is required"))
+            
         # Parse PR URL
         from utils.pr_parser import parse_pr_url
         pr_details = parse_pr_url(pr_url)
         if not pr_details:
             logger.error("Invalid PR URL format")
-            return templates.TemplateResponse(
-                "index.html",
-                {"request": request, "error": "Invalid PR URL format"}
-            )
+            return redirect(url_for('index', error="Invalid PR URL format"))
 
         # Initialize services
         github_token = os.environ.get("GITHUB_TOKEN")
         claude_api_key = os.environ.get("CLAUDE_API_KEY")
 
         if not github_token or not claude_api_key:
-            return templates.TemplateResponse(
-                "index.html",
-                {"request": request, "error": "Missing API credentials"}
-            )
+            return redirect(url_for('index', error="Missing API credentials"))
 
         from services.github_service import GitHubService
         from services.claude_service import ClaudeService
@@ -307,38 +305,30 @@ def review():
         
         review_data = await claude_service.analyze_pr(context)
 
-        return templates.TemplateResponse(
+        return render_template(
             "review.html",
-            {
-                "request": request,
-                "review": review_data,
-                "pr_url": pr_url,
-                "current_time": datetime.utcnow()
-            }
+            review=review_data,
+            pr_url=pr_url,
+            current_time=datetime.utcnow()
         )
 
     except Exception as e:
         logger.error(f"Error processing review: {str(e)}")
-        return templates.TemplateResponse(
-            "index.html",
-            {"request": request, "error": str(e)}
-        )
+        return redirect(url_for('index', error=str(e)))
 
 @app.route("/health")
 def health_check():
     """Health check endpoint"""
     try:
-        # Test database connection
         from database import db
         with db.session() as session:
             session.execute(text('SELECT 1'))
-        return JSONResponse({"status": "healthy", "message": "Service is running"})
+        return jsonify({"status": "healthy", "message": "Service is running"})
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
-        return JSONResponse(
-            {"status": "unhealthy", "message": str(e)},
-            status_code=500
-        )
+        return jsonify(
+            {"status": "unhealthy", "message": str(e)}
+        ), 500
 
 if __name__ == "__main__":
     import uvicorn
