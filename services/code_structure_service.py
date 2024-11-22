@@ -2,13 +2,88 @@ import ast
 import math
 import re
 import logging
-from typing import Dict, List, Optional, TypedDict, Union
-from dataclasses import dataclass
+import concurrent.futures
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, TypedDict, Union, Set
+from pathlib import Path
+import tempfile
+import subprocess
+import json
+from functools import lru_cache
+import lizard
+@dataclass
+class LanguageConfig:
+    """Configuration for language-specific analysis"""
+    name: str
+    extensions: Set[str]
+    analyzers: List[str]
+    max_line_length: int
+    complexity_threshold: int
+    parse_command: Optional[str] = None
+    style_checker: Optional[str] = None
+
+# Define language configurations
+LANGUAGE_CONFIGS = {
+    'python': LanguageConfig(
+        name='Python',
+        extensions={'.py', '.pyi', '.pyx'},
+        analyzers=['ast', 'pylint', 'mypy'],
+        max_line_length=88,  # Black formatter default
+        complexity_threshold=10,
+        style_checker='flake8'
+    ),
+    'javascript': LanguageConfig(
+        name='JavaScript',
+        extensions={'.js', '.jsx', '.mjs'},
+        analyzers=['esprima', 'eslint'],
+        max_line_length=80,
+        complexity_threshold=12,
+        style_checker='eslint'
+    ),
+    'typescript': LanguageConfig(
+        name='TypeScript',
+        extensions={'.ts', '.tsx'},
+        analyzers=['typescript', 'eslint'],
+        max_line_length=80,
+        complexity_threshold=12,
+        style_checker='tslint'
+    )
+}
+
+@dataclass
+class SecurityMetrics:
+    """Security-related metrics"""
+    vulnerabilities: List[Dict] = field(default_factory=list)
+    unsafe_patterns: List[Dict] = field(default_factory=list)
+    security_score: float = 100.0
+    authentication_checks: bool = False
+    input_validation: bool = False
+    data_encryption: bool = False
+
+@dataclass
+class PerformanceMetrics:
+    """Performance-related metrics"""
+    memory_usage: Optional[float] = None
+    time_complexity: str = "O(1)"
+    space_complexity: str = "O(1)"
+    async_operations: bool = False
+    caching_used: bool = False
+    resource_leaks: List[str] = field(default_factory=list)
+
+@dataclass
+class EnhancedComplexityMetrics:
+    """Enhanced complexity metrics"""
+    cyclomatic_complexity: int = 0
+    cognitive_complexity: int = 0
+    halstead_metrics: Dict = field(default_factory=dict)
+    maintainability_index: float = 100.0
+    nesting_depth: int = 0
+    documentation_coverage: float = 0.0
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(pathname)s:%(lineno)d] - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -48,35 +123,95 @@ class AnalysisResult:
     total_complexity: ComplexityMetrics
 
 class CodeStructureService:
-    """Service for analyzing code structure"""
+    """Enhanced service for analyzing code structure with multi-language support"""
+    
+    def __init__(self):
+        """Initialize the service with enhanced capabilities"""
+        self.metrics_cache = {}
+        self._init_language_analyzers()
+        
+    def _init_language_analyzers(self):
+        """Initialize language-specific analyzers"""
+        try:
+            import astroid
+            import pylint
+            import mypy
+            self.python_analyzers_available = True
+            logger.info("Python analyzers initialized successfully")
+        except ImportError:
+            self.python_analyzers_available = False
+            logger.warning("Python analyzers not available")
+
+        try:
+            import esprima
+            self.js_analyzers_available = True
+            logger.info("JavaScript analyzers initialized successfully")
+        except ImportError:
+            self.js_analyzers_available = False
+            logger.warning("JavaScript analyzers not available")
 
     def analyze_code(self, content: str, filename: str) -> AnalysisResult:
-        """Analyze code structure with enhanced error handling"""
+        """Analyze code structure with enhanced multi-language support and error handling"""
+        logger.info(f"Starting analysis for file: {filename}")
+        
         try:
+            # Input validation
+            if not content or not filename:
+                logger.error("Invalid input: content or filename is empty")
+                return self._empty_result()
+
             # Skip empty content
             if not content.strip():
                 logger.info(f"Skipping empty file: {filename}")
                 return self._empty_result()
+
+            # Get language configuration
+            ext = Path(filename).suffix.lower()
+            language_config = None
             
-            # Get file extension
-            ext = filename.split('.')[-1].lower() if '.' in filename else ''
-            
+            for lang_config in LANGUAGE_CONFIGS.values():
+                if ext in lang_config.extensions:
+                    language_config = lang_config
+                    break
+
+            if not language_config:
+                logger.warning(f"Unsupported file type: {filename}")
+                return self._empty_result()
+
+            logger.info(f"Using {language_config.name} analyzer for {filename}")
+
             try:
-                # Use appropriate parser based on file type
-                if ext in {'js', 'jsx', 'ts', 'tsx'}:
-                    return self._analyze_javascript(content, filename)
+                # Basic metrics using lizard
+                metrics = lizard.analyze_file.analyze_source(content, language_config.name)
+                
+                # Language-specific analysis
+                if language_config.name == 'Python':
+                    result = self._analyze_python_enhanced(content, filename, metrics)
+                elif language_config.name in ('JavaScript', 'TypeScript'):
+                    result = self._analyze_javascript_enhanced(content, filename, metrics)
                 else:
-                    return self._analyze_python(content, filename)
+                    logger.warning(f"Falling back to basic analysis for {filename}")
+                    result = self._analyze_generic(content, filename, metrics)
+
+                # Enhance result with security and performance metrics
+                result.security_metrics = self._analyze_security(content, language_config)
+                result.performance_metrics = self._analyze_performance(content, language_config)
+
+                logger.info(f"Analysis completed successfully for {filename}")
+                return result
+
             except SyntaxError as e:
                 logger.error(f"Syntax error in {filename}: {str(e)}")
                 return self._empty_result()
             except Exception as e:
-                logger.error(f"Error analyzing {filename}: {str(e)}")
+                logger.error(f"Error during analysis of {filename}: {str(e)}")
                 return self._empty_result()
-                
+
         except Exception as e:
             logger.error(f"Unexpected error analyzing {filename}: {str(e)}")
             return self._empty_result()
+        finally:
+            logger.info(f"Analysis finished for file: {filename}")
 
     def _analyze_python(self, content: str, filename: str) -> AnalysisResult:
         """Analyze Python code structure"""

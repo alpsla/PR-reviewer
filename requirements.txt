@@ -58,3 +58,7 @@ jinja2
 python-multipart
 aiofiles
 esprima
+astroid
+lizard
+mypy
+pylint
