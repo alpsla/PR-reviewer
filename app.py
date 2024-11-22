@@ -102,13 +102,26 @@ def create_app():
         logger.warning("Claude API key not found in environment variables")
 
     # Initialize services without failing startup
+    # Initialize services as module-level variables
+    github_service = None
+    claude_service = None
+    
     try:
-        github_service = GitHubService(github_token if github_token else "")
-        claude_service = ClaudeService(claude_api_key if claude_api_key else "")
+        if github_token:
+            github_service = GitHubService(github_token)
+            if not github_service.token_valid:
+                logger.error("GitHub token validation failed")
+                github_service = None
+        else:
+            logger.warning("GitHub token not provided")
+            
+        if claude_api_key:
+            claude_service = ClaudeService(claude_api_key)
+        else:
+            logger.warning("Claude API key not provided")
+            
     except Exception as e:
         logger.error(f"Error initializing services: {str(e)}")
-        github_service = None
-        claude_service = None
 
     @app.route('/', methods=['GET'])
     def index():
@@ -132,7 +145,7 @@ def create_app():
             return jsonify({"status": "unhealthy", "message": str(e)}), 500
 
     @app.route('/review', methods=['GET', 'POST'])
-    async def review():
+    def review():
         if request.method == 'GET':
             return redirect(url_for('index'))
             
@@ -161,10 +174,23 @@ def create_app():
                 flash(f'GitHub token validation failed: {token_message}', 'error')
                 return redirect(url_for('index'))
 
+            # Verify services are available
+            if not github_service:
+                flash('GitHub service not available. Please check configuration.', 'error')
+                return redirect(url_for('index'))
+                
+            if not claude_service:
+                flash('Claude service not available. Please check configuration.', 'error')
+                return redirect(url_for('index'))
+
             # Fetch PR data
             try:
                 logger.info("Fetching PR data from GitHub")
                 pr_data = github_service.fetch_pr_data(pr_details)
+                
+                # Fetch files and comments using sync methods
+                files = github_service.fetch_pr_files_sync(pr_details)
+                comments = github_service.fetch_pr_comments_sync(pr_details)
             except ValueError as e:
                 flash(f'Error accessing PR: {str(e)}', 'error')
                 return redirect(url_for('index'))
@@ -172,21 +198,13 @@ def create_app():
             # Analyze with Claude
             logger.info("Analyzing PR with Claude")
             try:
-                # Convert sync methods to async using sync_to_async
-                fetch_files = sync_to_async(github_service.fetch_pr_files)
-                fetch_comments = sync_to_async(github_service.fetch_pr_comments)
-                
-                # Fetch data asynchronously
-                files = await fetch_files(pr_details)
-                comments = await fetch_comments(pr_details)
-                
                 context = {
                     'pr_data': pr_data,
                     'files': files,
                     'comments': comments
                 }
                 
-                review_data = await claude_service.analyze_pr(context)
+                review_data = claude_service.analyze_pr_sync(context)
             except ValueError as e:
                 flash(f'Error analyzing PR: {str(e)}', 'error')
                 return redirect(url_for('index'))
@@ -268,6 +286,10 @@ def create_app():
             pr_details = session['pr_details']
             
             try:
+                # Verify GitHub service is available
+                if not github_service:
+                    raise ValueError("GitHub service not available")
+                    
                 # Post comment to GitHub
                 comment_result = github_service.post_pr_comment(
                     pr_details,

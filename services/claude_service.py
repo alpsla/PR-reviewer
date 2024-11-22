@@ -3,6 +3,7 @@ from typing import Dict, List, Union, Any, Optional
 import logging
 import json
 import re
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -14,17 +15,26 @@ logger = logging.getLogger(__name__)
 from services.dependency_service import DependencyService
 from services.code_structure_service import CodeStructureService
 from services.language_detection_service import LanguageDetectionService
+from plugins.documentation_parser import DocumentationParser
 
 class ClaudeService:
     def __init__(self, api_key: str):
         """Initialize Claude service with proper error handling"""
+        self.use_mock = True
+        self.init_error = None
+        self.client = None
+        self.dependency_service = None
+        self.code_structure_service = None
+        self.language_detection_service = None
+        self.doc_parser = None
+
         if not api_key:
             logger.warning("No Claude API key provided, falling back to mock service")
-            self.use_mock = True
+            self.init_error = "No API key provided"
             return
             
         try:
-            self.use_mock = False
+            # Initialize Claude client
             self.client = anthropic.Anthropic(
                 api_key=api_key,
                 default_headers={
@@ -33,29 +43,49 @@ class ClaudeService:
                     "X-Client-Version": "1.0.0"
                 }
             )
+            
+            # Initialize services
             self.dependency_service = DependencyService()
             self.code_structure_service = CodeStructureService()
             self.language_detection_service = LanguageDetectionService()
-            logger.info("Claude API client initialized successfully")
+            
+            # Initialize documentation parser
+            self.doc_parser = DocumentationParser()
+            self.doc_parser.initialize()
+            
+            self.use_mock = False
+            logger.info("Claude API client and services initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize Claude API client: {str(e)}")
+            logger.error(f"Failed to initialize services: {str(e)}")
             self.use_mock = True
             self.init_error = str(e)
     
-    async def analyze_pr(self, context: Dict) -> Dict:
-        """Analyzes PR using Claude API with enhanced error handling"""
+    def analyze_pr_sync(self, context: Dict) -> Dict:
+        """Synchronous version of analyze_pr that handles documentation parsing"""
         if self.use_mock:
             logger.info("Using mock review service")
             mock_reason = getattr(self, 'init_error', 'APIUnavailable')
             return self.mock_review(context, mock_reason)
             
         try:
-            # Add dependency and code structure analysis
+            # Add dependency, code structure, and documentation analysis
             if 'files' in context:
+                # Parse documentation
+                logger.info("Running documentation analysis")
+                try:
+                    doc_analysis = self.doc_parser.execute_sync({
+                        'files': [{'filename': f['filename'], 'content': f.get('content', '')} for f in context['files']]
+                    })
+                    context['documentation_analysis'] = doc_analysis
+                    logger.info("Documentation analysis completed successfully")
+                except Exception as e:
+                    logger.error(f"Documentation analysis failed: {str(e)}")
+                    context['documentation_analysis'] = None
+
                 # Perform language detection
                 logger.info("Running language detection")
                 try:
-                    language_detection = await self.language_detection_service.detectFromContent(context['files'])
+                    language_detection = self.language_detection_service.detect_from_files(context['files'])
                     context['language_detection'] = language_detection
                     logger.info(f"Language Determination: Primary language detected: {language_detection['primary']['name']}")
                 except Exception as e:
@@ -63,33 +93,38 @@ class ClaudeService:
                     context['language_detection'] = None
                 
                 logger.info("Running dependency analysis")
-                dependency_analysis = self.dependency_service.analyze_dependencies(context['files'])
-                context['dependency_analysis'] = dependency_analysis
+                if self.dependency_service:
+                    dependency_analysis = self.dependency_service.analyze_dependencies(context['files'])
+                    context['dependency_analysis'] = dependency_analysis
                 
                 logger.info("Running code structure analysis")
                 structure_analysis = {}
-                for file in context['files']:
-                    try:
-                        analysis = self.code_structure_service.analyze_code(
-                            file.get('content', ''),
-                            file['filename']
-                        )
-                        if isinstance(analysis, dict):
-                            structure_analysis[file['filename']] = analysis
-                        else:
-                            structure_analysis[file['filename']] = {
-                                'structures': getattr(analysis, 'structures', []),
-                                'imports': getattr(analysis, 'imports', []),
-                                'total_complexity': getattr(analysis, 'total_complexity', {})
-                            }
-                    except Exception as e:
-                        logger.error(f"Error analyzing {file['filename']}: {str(e)}")
+                if self.code_structure_service:
+                    for file in context['files']:
+                        try:
+                            analysis = self.code_structure_service.analyze_code(
+                                file.get('content', ''),
+                                file['filename']
+                            )
+                            if isinstance(analysis, dict):
+                                structure_analysis[file['filename']] = analysis
+                            else:
+                                structure_analysis[file['filename']] = {
+                                    'structures': getattr(analysis, 'structures', []),
+                                    'imports': getattr(analysis, 'imports', []),
+                                    'total_complexity': getattr(analysis, 'total_complexity', {})
+                                }
+                        except Exception as e:
+                            logger.error(f"Error analyzing {file['filename']}: {str(e)}")
                 context['structure_analysis'] = structure_analysis
             
             logger.info("Building analysis prompt")
             prompt = self._build_analysis_prompt(context)
             
             logger.info("Sending request to Claude API")
+            if not self.client:
+                raise ValueError("Claude API client not initialized")
+                
             response = self.client.messages.create(
                 model="claude-3-sonnet-20240229",
                 max_tokens=4096,
@@ -330,34 +365,74 @@ Structure your response using HTML with Bootstrap classes:
    - Code Quality and Best Practices
    - Dependencies and Architecture
    - Potential Issues
-   - Security Considerations
+    - Security Considerations
    - Performance Implications
    - Suggested Improvements"""
-        
-        return prompt
 
-    def _format_files(self, files: list) -> str:
-        """Formats the files list with detailed changes"""
+    def _build_analysis_prompt(self, context: Dict) -> str:
+        """Build analysis prompt with PR context"""
+        prompt = """Please provide a thorough code review for this pull request. Focus on:
+- Code Quality and Best Practices
+- Dependencies and Architecture
+- Potential Issues
+- Security Considerations
+- Performance Implications
+- Suggested Improvements"""
+
+        # Add PR data section
+        if 'pr_data' in context:
+            prompt += "\n\nPR Details:\n" + str(context['pr_data'])
+
+        # Add files section
+        if 'files' in context:
+            prompt += "\n\n" + self._format_files(context['files'])
+
+        # Add comments section
+        if 'comments' in context:
+            prompt += "\n\n" + self._format_comments(context['comments'])
+
+        # Add language detection results
+        if context.get('language_detection'):
+            prompt += "\n\nLanguage Detection:\n"
+            prompt += f"Primary: {context['language_detection']['primary']['name']}\n"
+            if context['language_detection'].get('secondary'):
+                prompt += "Secondary Languages:\n"
+                for lang in context['language_detection']['secondary']:
+                    prompt += f"- {lang['name']} ({lang['percentage']}%)\n"
+
+        # Add dependency analysis
+        if context.get('dependency_analysis'):
+            prompt += "\n\n" + self._format_dependency_analysis(context['dependency_analysis'])
+
+        # Add documentation analysis
+        if context.get('documentation_analysis'):
+            prompt += "\n\n" + self._format_documentation_analysis(context['documentation_analysis'])
+
+        return prompt
+    def _format_files(self, files: List[Dict]) -> str:
+        """Format files list for prompt"""
         if not files:
-            return "No file information available"
+            return "No files were modified"
             
-        return "\n".join([
-            f"- {f['filename']}:\n"
-            f"  • Changes: +{f['additions']}, -{f['deletions']}\n"
-            f"  • Status: {f['status']}"
-            for f in files
-        ])
-    
-    def _format_comments(self, comments: list) -> str:
-        """Formats PR comments for context"""
+        formatted = "Modified Files:\n"
+        for file in files:
+            formatted += f"\n{file['filename']}:\n"
+            formatted += f"- Status: {file['status']}\n"
+            formatted += f"- Changes: +{file['additions']}, -{file['deletions']}\n"
+            if file.get('patch'):
+                formatted += f"- Diff:\n```\n{file['patch']}\n```\n"
+        return formatted
+
+    def _format_comments(self, comments: List[Dict]) -> str:
+        """Format PR comments for prompt"""
         if not comments:
-            return "No previous discussion found"
+            return "No comments found"
             
-        return "Previous Discussion:\n" + "\n".join([
-            f"- {comment['user']}: {comment['body']}"
-            for comment in comments[:5]
-        ])
-    
+        formatted = "Discussion Context:\n"
+        for comment in comments[:5]:  # Limit to 5 most recent comments
+            formatted += f"\n{comment['user']} wrote:\n{comment['body']}\n"
+        return formatted
+
     def _format_dependency_analysis(self, analysis: Dict) -> str:
         """Format dependency analysis results"""
         if not analysis or analysis.get('error'):
@@ -374,53 +449,16 @@ Structure your response using HTML with Bootstrap classes:
                 formatted += f"- {' -> '.join(cycle)}\n"
         else:
             formatted += "\nNo circular dependencies found.\n"
-            
+        
         if external_deps:
             formatted += "\nExternal Dependencies:\n"
             for dep in external_deps:
-                formatted += f"- {dep['module']} depends on {dep['depends_on']}\n"
+                formatted += f"- {dep}\n"
         else:
             formatted += "\nNo external dependencies found.\n"
-            
         return formatted
-            
+
     def _format_documentation_analysis(self, analysis: Dict) -> str:
-        """Format documentation analysis results for Claude prompt"""
-        if not analysis:
-            return "Documentation analysis not available"
-            
-        docs = analysis.get('documentation', {})
-        stats = analysis.get('stats', {})
-        
-        formatted = "Documentation Analysis:\n"
-        
-        # Add overall statistics
-        formatted += f"\nOverall Statistics:\n"
-        formatted += f"- Average Coverage: {stats.get('average_coverage', 0)}%\n"
-        formatted += f"- Average Quality: {stats.get('average_quality', 0)}%\n"
-        formatted += f"- Files Analyzed: {stats.get('total_files_analyzed', 0)}\n"
-        
-        # Add per-file details
-        formatted += "\nPer-file Documentation Details:\n"
-        for filename, file_docs in docs.items():
-            if isinstance(file_docs, dict) and 'error' not in file_docs:
-                formatted += f"\n{filename}:\n"
-                formatted += f"- Coverage: {file_docs.get('coverage', 0)}%\n"
-                formatted += f"- Quality Score: {file_docs.get('quality_score', 0)}%\n"
-                
-                # Add class documentation info
-                if file_docs.get('classes'):
-                    formatted += "- Documented Classes:\n"
-                    for class_name, class_info in file_docs['classes'].items():
-                        formatted += f"  • {class_name}: {'Documented' if class_info.get('docstring') else 'Undocumented'}\n"
-                
-                # Add function documentation info
-                if file_docs.get('functions'):
-                    formatted += "- Documented Functions:\n"
-                    for func_name, func_info in file_docs['functions'].items():
-                        formatted += f"  • {func_name}: {'Documented' if func_info.get('docstring') else 'Undocumented'}\n"
-                        
-        return formatted
         """Format documentation analysis results"""
         if not analysis or not isinstance(analysis, dict):
             return "Documentation analysis not available"
@@ -432,9 +470,11 @@ Structure your response using HTML with Bootstrap classes:
         
         if stats:
             formatted += f"\nOverall Statistics:\n"
+            formatted += f"- Total Files: {stats.get('total_files_analyzed', 0)}\n"
             formatted += f"- Average Coverage: {stats.get('average_coverage', 0)}%\n"
             formatted += f"- Average Quality: {stats.get('average_quality', 0)}%\n"
-            formatted += f"- Total Files Analyzed: {stats.get('total_files_analyzed', 0)}\n"
+            formatted += f"- Well Documented Files: {stats.get('well_documented_files', 0)}\n"
+            formatted += f"- Need Improvement: {stats.get('needs_improvement', 0)}\n"
             
         if documentation:
             formatted += "\nPer-file Documentation:\n"
@@ -444,9 +484,116 @@ Structure your response using HTML with Bootstrap classes:
                     formatted += f"- Coverage: {doc_info.get('coverage', 0)}%\n"
                     formatted += f"- Quality Score: {doc_info.get('quality_score', 0)}%\n"
                     
+                    # Add class documentation info
+                    if doc_info.get('classes'):
+                        formatted += "- Documented Classes:\n"
+                        for class_name, class_info in doc_info['classes'].items():
+                            formatted += f"  • {class_name}: {'Documented' if class_info.get('docstring') else 'Undocumented'}\n"
+                    
+                    # Add function documentation info
+                    if doc_info.get('functions'):
+                        formatted += "- Documented Functions:\n"
+                        for func_name, func_info in doc_info['functions'].items():
+                            formatted += f"  • {func_name}: {'Documented' if func_info.get('docstring') else 'Undocumented'}\n"
+                            
         return formatted
+        
+    def analyze_pr_sync(self, context: Dict) -> Dict:
+        """Synchronous version of analyze_pr method.
+        
+        Args:
+            context: Dictionary containing PR analysis context
             
-        return formatted
+        Returns:
+            Dictionary containing the analysis results
+            
+        Raises:
+            Exception: If analysis fails
+        """
+        if self.use_mock:
+            logger.info("Using mock review service")
+            mock_reason = getattr(self, 'init_error', 'APIUnavailable')
+            return self.mock_review(context, mock_reason)
+            
+        try:
+            # Add dependency, code structure, and documentation analysis
+            if 'files' in context:
+                # Parse documentation
+                logger.info("Running documentation analysis")
+                try:
+                    doc_analysis = self.doc_parser.execute_sync({
+                        'files': [{'filename': f['filename'], 'content': f.get('content', '')} for f in context['files']]
+                    })
+                    context['documentation_analysis'] = doc_analysis
+                    logger.info("Documentation analysis completed successfully")
+                except Exception as e:
+                    logger.error(f"Documentation analysis failed: {str(e)}")
+                    context['documentation_analysis'] = None
+
+                # Perform language detection
+                logger.info("Running language detection")
+                try:
+                    language_detection = self.language_detection_service.detect_from_files(context['files'])
+                    context['language_detection'] = language_detection
+                    logger.info(f"Language Determination: Primary language detected: {language_detection['primary']['name']}")
+                except Exception as e:
+                    logger.error(f"Language Determination: Failed to detect languages: {str(e)}")
+                    context['language_detection'] = None
+                
+                # Run dependency analysis if available
+                if self.dependency_service:
+                    logger.info("Running dependency analysis")
+                    dependency_analysis = self.dependency_service.analyze_dependencies(context['files'])
+                    context['dependency_analysis'] = dependency_analysis
+                
+                # Run code structure analysis if available
+                if self.code_structure_service:
+                    logger.info("Running code structure analysis")
+                    structure_analysis = {}
+                    for file in context['files']:
+                        try:
+                            analysis = self.code_structure_service.analyze_code(
+                                file.get('content', ''),
+                                file['filename']
+                            )
+                            if isinstance(analysis, dict):
+                                structure_analysis[file['filename']] = analysis
+                            else:
+                                structure_analysis[file['filename']] = {
+                                    'structures': getattr(analysis, 'structures', []),
+                                    'imports': getattr(analysis, 'imports', []),
+                                    'total_complexity': getattr(analysis, 'total_complexity', {})
+                                }
+                        except Exception as e:
+                            logger.error(f"Error analyzing {file['filename']}: {str(e)}")
+                    context['structure_analysis'] = structure_analysis
+            
+            logger.info("Building analysis prompt")
+            prompt = self._build_analysis_prompt(context)
+            
+            logger.info("Sending request to Claude API")
+            if not self.client:
+                raise ValueError("Claude API client not initialized")
+                
+            response = self.client.messages.create(
+                model="claude-3-sonnet-20240229",
+                max_tokens=4096,
+                messages=[{
+                    "role": "user",
+                    "content": prompt
+                }],
+                temperature=0.7,
+                system="You are a code review expert. Analyze pull requests thoroughly and provide constructive feedback focusing on code quality, security, and best practices."
+            )
+            
+            logger.info("Successfully received response from Claude API")
+            return self._parse_claude_response(response)
+            
+        except Exception as e:
+            logger.error(f"Error during PR analysis: {str(e)}")
+            error_msg = f"Analysis error: {str(e)}"
+            return self.mock_review(context, error_msg)
+                    
     
     def _parse_claude_response(self, response: Any) -> Dict:
         """Parses Claude's response with enhanced validation and error handling"""

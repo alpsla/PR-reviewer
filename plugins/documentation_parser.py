@@ -292,3 +292,65 @@ class DocumentationParser(BasePlugin):
             'average_quality': round(total_quality / total_files if total_files > 0 else 0, 2),
             'total_files_analyzed': total_files
         }
+    def execute_sync(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Synchronous version of execute method for documentation parsing.
+        
+        Args:
+            context: Dictionary containing files to analyze and other context
+                    Expected format: {'files': [{'filename': str, 'content': str}]}
+                    
+        Returns:
+            Dict containing documentation analysis results and statistics
+            Format: {
+                'documentation': Dict[str, Dict],  # Per-file documentation info
+                'stats': Dict[str, Any]  # Overall statistics
+            }
+            
+        Raises:
+            DocumentationError: If parsing fails or files are invalid
+        """
+        if not self.initialized:
+            raise DocumentationError("Documentation parser not initialized")
+            
+        try:
+            files = context.get('files', [])
+            if not files:
+                raise DocumentationError("No files provided for documentation analysis")
+                
+            results = {}
+            total_files = len(files)
+            
+            for index, file in enumerate(files):
+                filename = file.get('filename', '')
+                content = file.get('content', '')
+                
+                if not filename or not content:
+                    continue
+                    
+                # Check cache
+                cache_key = f"{filename}:{hash(content)}"
+                if cache_key in self._cache:
+                    results[filename] = self._cache[cache_key]
+                    continue
+                    
+                # Parse documentation
+                ext = Path(filename).suffix.lower()
+                parser = self.supported_languages.get(ext)
+                
+                if parser:
+                    try:
+                        doc_info = parser(content)
+                        results[filename] = doc_info
+                        self._cache[cache_key] = doc_info
+                    except Exception as e:
+                        logger.error(f"Failed to parse documentation in {filename}: {str(e)}")
+                        results[filename] = {'error': str(e)}
+                        
+            return {
+                'documentation': results,
+                'stats': self._calculate_stats(results)
+            }
+            
+        except Exception as e:
+            logger.error(f"Documentation parsing failed: {str(e)}")
+            raise DocumentationError(f"Documentation parsing failed: {str(e)}")

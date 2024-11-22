@@ -199,3 +199,52 @@ class GitHubService:
                 raise ValueError("Repository or PR not found. Please verify the URL and permissions")
             else:
                 raise ValueError(f"Failed to post PR comment: {str(e)}")
+
+    def fetch_pr_files_sync(self, pr_details: Dict) -> List[Dict]:
+        """Synchronous version of fetch_pr_files"""
+        if not self.github or not self.token_valid:
+            raise ValueError("GitHub token not configured or invalid")
+            
+        try:
+            repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
+            pr = repo.get_pull(pr_details['number'])
+            
+            files_data = []
+            for f in pr.get_files():
+                files_data.append({
+                    'filename': f.filename,
+                    'status': f.status,
+                    'additions': f.additions,
+                    'deletions': f.deletions,
+                    'changes': f.changes,
+                    'patch': f.patch if f.patch else ''
+                })
+            return files_data
+        except GithubException as e:
+            if e.status == 403:
+                raise ValueError("Access denied. Please check repository permissions for file access")
+            else:
+                raise ValueError(f"Failed to fetch PR files: {str(e)}")
+
+    def fetch_pr_comments_sync(self, pr_details: Dict) -> List[Dict]:
+        """Synchronous version of fetch_pr_comments"""
+        if not self.github or not self.token_valid:
+            raise ValueError("GitHub token not configured or invalid")
+            
+        try:
+            repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
+            pr = repo.get_pull(pr_details['number'])
+            
+            comments_data = []
+            for comment in pr.get_comments():
+                comments_data.append({
+                    'user': comment.user.login,
+                    'body': comment.body,
+                    'created_at': comment.created_at
+                })
+            return comments_data
+        except GithubException as e:
+            if e.status == 403:
+                raise ValueError("Access denied. Please check permissions for viewing comments")
+            else:
+                raise ValueError(f"Failed to fetch PR comments: {str(e)}")
