@@ -213,6 +213,13 @@ class LanguageDetectionService:
             total_bytes = 0
             skipped_files = []
             
+            # Store confidence scores for future reference
+            self.confidence_scores = {}
+            
+            # Track Python and JavaScript specifically
+            python_files = []
+            javascript_files = []
+            
             for file in files:
                 try:
                     filename = file['filename']
@@ -281,8 +288,26 @@ class LanguageDetectionService:
             if not sorted_languages:
                 raise ValueError("No languages detected in files")
             
+            # Prioritize Python over JavaScript when both are present
+            python_idx = next((i for i, (name, _) in enumerate(sorted_languages) if name == 'Python'), -1)
+            js_idx = next((i for i, (name, _) in enumerate(sorted_languages) if name == 'JavaScript'), -1)
+            
+            if python_idx != -1 and js_idx != -1 and js_idx < python_idx:
+                # Swap Python and JavaScript
+                sorted_languages[python_idx], sorted_languages[js_idx] = sorted_languages[js_idx], sorted_languages[python_idx]
+            
             # Create RepositoryLanguages object
             primary_lang = sorted_languages[0]
+            
+            # Store confidence scores
+            self.confidence_scores = {
+                name: {
+                    'confidence': info['confidence'],
+                    'bytes': info['bytes'],
+                    'rank': idx + 1
+                }
+                for idx, (name, info) in enumerate(sorted_languages)
+            }
             self.current_detection = {
                 'primary': {
                     'name': primary_lang[0],

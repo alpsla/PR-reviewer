@@ -127,8 +127,30 @@ class CodeStructureService:
     
     def __init__(self):
         """Initialize the service with enhanced capabilities"""
-        self.metrics_cache = {}
+        self.metrics_cache = {}  # Cache for analysis results
+        self.language_stats = {}  # Store language detection results
+        self.dependency_graph = {}  # Store dependency relationships
+        self.api_stability_info = {}  # Store API stability information
         self._init_language_analyzers()
+        
+    def _get_cache_key(self, content: str, filename: str) -> str:
+        """Generate cache key for analysis results"""
+        import hashlib
+        content_hash = hashlib.md5(content.encode()).hexdigest()
+        return f"{filename}:{content_hash}"
+        
+    def _store_result(self, cache_key: str, result: AnalysisResult) -> None:
+        """Store analysis result in cache"""
+        self.metrics_cache[cache_key] = {
+            'result': result,
+            'timestamp': datetime.utcnow(),
+            'metrics': {
+                'documentation_coverage': self._calculate_doc_coverage(result),
+                'dependency_count': len(result.imports),
+                'complexity_score': result.total_complexity.cyclomatic_complexity,
+                'maintainability_index': result.total_complexity.maintainability_index
+            }
+        }
         
     def _init_language_analyzers(self):
         """Initialize language-specific analyzers"""
@@ -153,6 +175,14 @@ class CodeStructureService:
     def analyze_code(self, content: str, filename: str) -> AnalysisResult:
         """Analyze code structure with enhanced multi-language support and error handling"""
         logger.info(f"Starting analysis for file: {filename}")
+        
+        # Check cache first
+        cache_key = self._get_cache_key(content, filename)
+        if cache_key in self.metrics_cache:
+            cached = self.metrics_cache[cache_key]
+            if (datetime.utcnow() - cached['timestamp']).total_seconds() < 3600:  # 1 hour cache
+                logger.info(f"Using cached analysis for {filename}")
+                return cached['result']
         
         try:
             # Input validation
