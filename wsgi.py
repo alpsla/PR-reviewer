@@ -24,15 +24,6 @@ app = Flask(__name__,
 # Enable CORS
 CORS(app)
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Configure logging with more detailed format
 logging.basicConfig(
     level=logging.INFO,
@@ -183,18 +174,9 @@ class HealthLoggingMiddleware:
             
         return response
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.on_event("startup")
-async def startup_event():
-    """Startup event handler for FastAPI"""
+# Perform startup checks
+def run_startup_checks():
+    """Run startup checks for the application"""
     try:
         logger.info("=== Starting PR Review Assistant ===")
         
@@ -212,6 +194,9 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Failed to start application: {str(e)}")
         raise
+
+# Run startup checks when the module is imported
+run_startup_checks()
 
 @app.route("/")
 def index():
@@ -254,8 +239,8 @@ def review():
 
         # Fetch PR data
         pr_data = github_service.fetch_pr_data(pr_details)
-        files = await github_service.fetch_pr_files(pr_details)
-        comments = await github_service.fetch_pr_comments(pr_details)
+        files = github_service.fetch_pr_files_sync(pr_details)
+        comments = github_service.fetch_pr_comments_sync(pr_details)
         
         # Convert files and comments content for analysis
         for file in files:
@@ -289,9 +274,8 @@ def review():
             except Exception as e:
                 logger.error(f"Error analyzing {file['filename']}: {str(e)}")
 
-        # Prepare context for Claude analysis
         # Parse documentation
-        doc_analysis = await doc_parser.execute({
+        doc_analysis = doc_parser.execute_sync({
             'files': [{'filename': f['filename'], 'content': f.get('content', '')} for f in files]
         })
 
@@ -303,7 +287,7 @@ def review():
             'documentation_analysis': doc_analysis
         }
         
-        review_data = await claude_service.analyze_pr(context)
+        review_data = claude_service.analyze_pr_sync(context)
 
         return render_template(
             "review.html",
