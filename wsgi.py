@@ -285,11 +285,15 @@ async def review(request: Request, pr_url: str = Form(...)):
                 logger.error(f"Error processing file content: {str(e)}")
                 file['content'] = ''
 
-        # Initialize code structure service
+        # Initialize services
         from services.code_structure_service import CodeStructureService
+        from plugins.documentation_parser import DocumentationParser
+        
         code_structure_service = CodeStructureService()
+        doc_parser = DocumentationParser()
+        doc_parser.initialize()
 
-        # Analyze code structure
+        # Analyze code structure and documentation
         structure_analysis = {}
         for file in files:
             try:
@@ -306,11 +310,17 @@ async def review(request: Request, pr_url: str = Form(...)):
                 logger.error(f"Error analyzing {file['filename']}: {str(e)}")
 
         # Prepare context for Claude analysis
+        # Parse documentation
+        doc_analysis = await doc_parser.execute({
+            'files': [{'filename': f['filename'], 'content': f.get('content', '')} for f in files]
+        })
+
         context = {
             'pr_data': pr_data,
             'files': files,
             'comments': comments,
-            'structure_analysis': structure_analysis
+            'structure_analysis': structure_analysis,
+            'documentation_analysis': doc_analysis
         }
         
         review_data = await claude_service.analyze_pr(context)

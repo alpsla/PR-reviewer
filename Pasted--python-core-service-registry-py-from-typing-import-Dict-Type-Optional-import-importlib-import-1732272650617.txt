@@ -1,0 +1,286 @@
+```python
+# core/service_registry.py
+from typing import Dict, Type, Optional
+import importlib
+import inspect
+from core.exceptions import ServiceRegistrationError
+from services.base_service import BaseService
+
+class ServiceRegistry:
+    """Dynamic service registry with health monitoring"""
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if not hasattr(self, 'initialized'):
+            self.services: Dict[str, BaseService] = {}
+            self.health_status: Dict[str, bool] = {}
+            self.metrics: Dict[str, Dict] = {}
+            self.initialized = True
+
+    def register(self, service_name: str, service_class: Type[BaseService], **kwargs) -> None:
+        """Register a service with the registry"""
+        try:
+            if not issubclass(service_class, BaseService):
+                raise ServiceRegistrationError(
+                    f"Service class {service_class.__name__} must inherit from BaseService"
+                )
+            
+            service_instance = service_class(**kwargs)
+            self.services[service_name] = service_instance
+            self.health_status[service_name] = True
+            self.metrics[service_name] = {}
+            
+        except Exception as e:
+            raise ServiceRegistrationError(f"Failed to register service {service_name}: {str(e)}")
+
+    def get_service(self, service_name: str) -> Optional[BaseService]:
+        """Get a service by name"""
+        return self.services.get(service_name)
+
+    async def check_health(self) -> Dict[str, bool]:
+        """Check health of all registered services"""
+        for name, service in self.services.items():
+            try:
+                self.health_status[name] = await service.health_check()
+            except Exception as e:
+                self.health_status[name] = False
+        return self.health_status
+
+    def update_metrics(self, service_name: str, metrics: Dict) -> None:
+        """Update metrics for a service"""
+        if service_name in self.services:
+            self.metrics[service_name].update(metrics)
+
+# core/event_bus.py
+from typing import Dict, List, Callable, Any
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
+
+class EventBus:
+    """Event bus for service communication"""
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if not hasattr(self, 'initialized'):
+            self.subscribers: Dict[str, List[Callable]] = {}
+            self.event_history: List[Dict] = []
+            self.max_history = 1000
+            self.initialized = True
+
+    async def publish(self, event_name: str, data: Any) -> None:
+        """Publish an event to all subscribers"""
+        if event_name in self.subscribers:
+            event_data = {'name': event_name, 'data': data}
+            self.event_history.append(event_data)
+            
+            if len(self.event_history) > self.max_history:
+                self.event_history.pop(0)
+            
+            for subscriber in self.subscribers[event_name]:
+                try:
+                    if asyncio.iscoroutinefunction(subscriber):
+                        await subscriber(data)
+                    else:
+                        subscriber(data)
+                except Exception as e:
+                    logger.error(f"Error in event subscriber: {str(e)}")
+
+    def subscribe(self, event_name: str, callback: Callable) -> None:
+        """Subscribe to an event"""
+        if event_name not in self.subscribers:
+            self.subscribers[event_name] = []
+        self.subscribers[event_name].append(callback)
+
+    def unsubscribe(self, event_name: str, callback: Callable) -> None:
+        """Unsubscribe from an event"""
+        if event_name in self.subscribers and callback in self.subscribers[event_name]:
+            self.subscribers[event_name].remove(callback)
+
+# core/plugin_manager.py
+from typing import Dict, Type, Any
+import importlib.util
+import inspect
+from pathlib import Path
+from core.exceptions import PluginError
+
+class PluginManager:
+    """Plugin system for extensibility"""
+    
+    def __init__(self, plugin_dir: str = "plugins"):
+        self.plugin_dir = Path(plugin_dir)
+        self.plugins: Dict[str, Any] = {}
+        self.plugin_configs: Dict[str, Dict] = {}
+
+    def load_plugins(self) -> None:
+        """Load all plugins from plugin directory"""
+        if not self.plugin_dir.exists():
+            return
+
+        for plugin_file in self.plugin_dir.glob("*.py"):
+            if plugin_file.stem.startswith("__"):
+                continue
+
+            try:
+                spec = importlib.util.spec_from_file_location(
+                    plugin_file.stem, str(plugin_file)
+                )
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    
+                    # Look for plugin class
+                    for name, obj in inspect.getmembers(module):
+                        if (inspect.isclass(obj) and 
+                            hasattr(obj, '_is_plugin') and 
+                            obj._is_plugin):
+                            self.register_plugin(name, obj)
+                            
+            except Exception as e:
+                raise PluginError(f"Failed to load plugin {plugin_file.name}: {str(e)}")
+
+    def register_plugin(self, name: str, plugin_class: Type) -> None:
+        """Register a new plugin"""
+        try:
+            plugin_instance = plugin_class()
+            self.plugins[name] = plugin_instance
+            self.plugin_configs[name] = getattr(plugin_instance, 'config', {})
+        except Exception as e:
+            raise PluginError(f"Failed to register plugin {name}: {str(e)}")
+
+    def get_plugin(self, name: str) -> Any:
+        """Get a plugin by name"""
+        return self.plugins.get(name)
+
+# core/cache_manager.py
+from typing import Any, Optional
+import time
+from datetime import datetime, timedelta
+import json
+from pathlib import Path
+
+class CacheManager:
+    """Caching layer for improved performance"""
+    
+    def __init__(self, cache_dir: str = ".cache"):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.memory_cache: Dict[str, Any] = {}
+        self.cache_ttl: Dict[str, int] = {}
+
+    async def get(self, key: str) -> Optional[Any]:
+        """Get value from cache"""
+        # Check memory cache first
+        if key in self.memory_cache:
+            if self._is_valid(key):
+                return self.memory_cache[key]
+            else:
+                del self.memory_cache[key]
+
+        # Check file cache
+        cache_file = self.cache_dir / f"{key}.json"
+        if cache_file.exists():
+            try:
+                data = json.loads(cache_file.read_text())
+                if datetime.fromisoformat(data['expires']) > datetime.now():
+                    self.memory_cache[key] = data['value']
+                    return data['value']
+                else:
+                    cache_file.unlink()
+            except Exception:
+                pass
+        return None
+
+    async def set(self, key: str, value: Any, ttl: int = 3600) -> None:
+        """Set value in cache with TTL in seconds"""
+        self.memory_cache[key] = value
+        self.cache_ttl[key] = int(time.time()) + ttl
+
+        # Save to file cache
+        cache_file = self.cache_dir / f"{key}.json"
+        cache_data = {
+            'value': value,
+            'expires': (datetime.now() + timedelta(seconds=ttl)).isoformat()
+        }
+        cache_file.write_text(json.dumps(cache_data))
+
+    async def delete(self, key: str) -> None:
+        """Delete value from cache"""
+        if key in self.memory_cache:
+            del self.memory_cache[key]
+            del self.cache_ttl[key]
+
+        cache_file = self.cache_dir / f"{key}.json"
+        if cache_file.exists():
+            cache_file.unlink()
+
+    def _is_valid(self, key: str) -> bool:
+        """Check if cached value is still valid"""
+        return int(time.time()) < self.cache_ttl.get(key, 0)
+
+# Usage example in pr_analyzer.py
+class PRAnalyzer:
+    def __init__(self, github_token: str, claude_api_key: str):
+        self.service_registry = ServiceRegistry()
+        self.event_bus = EventBus()
+        self.plugin_manager = PluginManager()
+        self.cache_manager = CacheManager()
+        
+        # Register services
+        self.service_registry.register('github', GitHubService, token=github_token)
+        self.service_registry.register('claude', ClaudeService, api_key=claude_api_key)
+        self.service_registry.register('language', LanguageService)
+        
+        # Load plugins
+        self.plugin_manager.load_plugins()
+        
+        # Subscribe to events
+        self.event_bus.subscribe('analysis_complete', self._handle_analysis_complete)
+
+    async def analyze_pr(self, pr_url: str) -> AnalysisResult:
+        """Enhanced PR analysis with caching and events"""
+        try:
+            # Check cache first
+            cache_key = f"pr_analysis_{pr_url}"
+            cached_result = await self.cache_manager.get(cache_key)
+            if cached_result:
+                return cached_result
+
+            # Regular analysis flow
+            result = await super().analyze_pr(pr_url)
+            
+            # Cache result
+            await self.cache_manager.set(cache_key, result)
+            
+            # Publish event
+            await self.event_bus.publish('analysis_complete', {
+                'pr_url': pr_url,
+                'result': result
+            })
+            
+            return result
+            
+        except Exception as e:
+            await self.event_bus.publish('analysis_error', {
+                'pr_url': pr_url,
+                'error': str(e)
+            })
+            raise
+```
+
+I'll continue with the enhanced services implementation in the next part. Would you like me to:
+1. Proceed with the enhanced services layer?
+2. Add more details to any of these components?
+3. Show how to implement custom plugins?
+4. Add the monitoring system implementation?

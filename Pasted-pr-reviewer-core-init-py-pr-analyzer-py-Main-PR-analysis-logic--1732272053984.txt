@@ -1,0 +1,75 @@
+pr_reviewer/
+├── core/
+│   ├── __init__.py
+│   ├── pr_analyzer.py        # Main PR analysis logic
+│   └── exceptions.py         # Custom exceptions
+│
+├── services/
+│   ├── __init__.py
+│   ├── github_service.py     # GitHub API interactions
+│   ├── claude_service.py     # Claude API interactions
+│   ├── language_service.py   # Language detection
+│   ├── metrics_service.py    # Performance metrics collection
+│   └── base_service.py       # Base service class
+│
+├── analyzers/               # Part 4: Tool-specific Analyzers
+│   ├── __init__.py
+│   ├── base_analyzer.py
+│   ├── python_analyzer.py
+│   ├── javascript_analyzer.py
+│   └── brightscript_analyzer.py
+│
+├── config/                  # Part 2: Tool Configuration
+│   ├── __init__.py
+│   ├── tool_registry.py
+│   ├── validators.py
+│   └── settings.py
+│
+├── models/
+│   ├── __init__.py
+│   ├── pr_models.py
+│   ├── tool_models.py      # Part 2: Tool models
+│   ├── metrics_models.py   # Part 3: Metrics models
+│   └── analysis_models.py
+│
+├── utils/
+│   ├── __init__.py
+│   ├── url_parser.py
+│   ├── logger.py
+│   ├── validators.py
+│   └── performance.py      # Part 3: Performance utilities
+│
+├── monitoring/             # Part 3: Performance Monitoring
+│   ├── __init__.py
+│   ├── collectors.py
+│   ├── analyzers.py
+│   └── reporters.py
+│
+├── integrations/           # Part 5: Integration Examples
+│   ├── __init__.py
+│   ├── github_app.py
+│   ├── ci_integration.py
+│   └── ide_plugin.py
+│
+├── examples/               # Part 5: Usage Examples
+│   ├── basic_usage.py
+│   ├── custom_analyzer.py
+│   └── performance_monitoring.py
+│
+├── tests/
+│   ├── __init__.py
+│   ├── test_core/
+│   ├── test_services/
+│   ├── test_analyzers/     # Part 4 tests
+│   ├── test_monitoring/    # Part 3 tests
+│   └── test_integrations/  # Part 5 tests
+│
+├── docs/                   # Documentation
+│   ├── setup.md
+│   ├── configuration.md    # Part 2 docs
+│   ├── monitoring.md       # Part 3 docs
+│   ├── analyzers.md        # Part 4 docs
+│   └── integration.md      # Part 5 docs
+│
+├── main.py                 # Application entry point
+└── requirements.txt

@@ -288,6 +288,7 @@ class ClaudeService:
         files = context.get('files', [])
         comments = context.get('comments', [])
         dependency_analysis = context.get('dependency_analysis', {})
+        documentation_analysis = context.get('documentation_analysis', {})
 
         prompt = f"""PR Details:
 Title: {pr_data['title']}
@@ -305,6 +306,9 @@ Discussion Context:
 {self._format_comments(comments)}
 
 Dependency Analysis:
+Documentation Analysis:
+{self._format_documentation_analysis(documentation_analysis)}
+
 {self._format_dependency_analysis(dependency_analysis)}
 
 Structure your response using HTML with Bootstrap classes:
@@ -374,6 +378,34 @@ Structure your response using HTML with Bootstrap classes:
                 formatted += f"- {dep['module']} depends on {dep['depends_on']}\n"
         else:
             formatted += "\nNo external dependencies found.\n"
+            
+        return formatted
+            
+    def _format_documentation_analysis(self, analysis: Dict) -> str:
+        """Format documentation analysis results"""
+        if not analysis or not isinstance(analysis, dict):
+            return "Documentation analysis not available"
+            
+        documentation = analysis.get('documentation', {})
+        stats = analysis.get('stats', {})
+        
+        formatted = "Documentation Analysis Results:\n"
+        
+        if stats:
+            formatted += f"\nOverall Statistics:\n"
+            formatted += f"- Average Coverage: {stats.get('average_coverage', 0)}%\n"
+            formatted += f"- Average Quality: {stats.get('average_quality', 0)}%\n"
+            formatted += f"- Total Files Analyzed: {stats.get('total_files_analyzed', 0)}\n"
+            
+        if documentation:
+            formatted += "\nPer-file Documentation:\n"
+            for filename, doc_info in documentation.items():
+                if isinstance(doc_info, dict) and 'error' not in doc_info:
+                    formatted += f"\n{filename}:\n"
+                    formatted += f"- Coverage: {doc_info.get('coverage', 0)}%\n"
+                    formatted += f"- Quality Score: {doc_info.get('quality_score', 0)}%\n"
+                    
+        return formatted
             
         return formatted
     
