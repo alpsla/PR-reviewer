@@ -33,17 +33,17 @@ class DependencyService:
                 processed_files = 0
                 for file in files:
                     try:
-                        filename = file.get('filename', '')
-                        if not filename:
+                        current_filename = file.get('filename', '')
+                        if not current_filename:
                             continue
                             
                         processed_files += 1
                         progress = (processed_files / total_files) * 100
-                        logger.info(f"Code Structure Analysis: Processing file {processed_files}/{total_files} ({progress:.1f}%): {filename}")
+                        logger.info(f"Code Structure Analysis: Processing file {processed_files}/{total_files} ({progress:.1f}%): {current_filename}")
                         
                         self._write_files_to_temp([file])
                     except Exception as e:
-                        logger.error(f"Code Structure Analysis: Error processing {filename}: {str(e)}")
+                        logger.error(f"Code Structure Analysis: Error processing file: {str(e)}")
                 
                 # Run dependency analysis
                 logger.info("Code Structure Analysis: Running dependency-cruiser analysis")
@@ -148,7 +148,7 @@ class DependencyService:
                         "severity": "error",
                         "from": {},
                         "to": {
-                            "circular": "true"
+                            "circular": True
                         }
                     }
                 ],
@@ -167,10 +167,10 @@ class DependencyService:
                     "maxDepth": 6,
                     "includeOnly": "\\.(js|jsx|ts|tsx|py)$",
                     "moduleSystems": ["amd", "cjs", "es6", "tsd"],
-                    "tsConfig": null,
+                    "tsConfig": None,
                     "tsPreCompilationDeps": "true",
                     "preserveSymlinks": "false",
-                    "webpackConfig": null,
+                    "webpackConfig": None,
                     "enhancedResolveOptions": {
                         "exportsFields": ["exports"],
                         "conditionNames": ["import", "require", "node", "default"],
@@ -390,6 +390,44 @@ class DependencyService:
             total_duplicated = sum(block_size for _ in duplication['duplicate_blocks'])
             duplication['similarity_score'] = total_duplicated / len(lines)
         
+    def _calculate_comment_ratio(self, module: Dict) -> float:
+        """Calculate the ratio of comments to code"""
+        if not module.get('source'):
+            return 0.0
+        
+        content = module.get('source', '')
+        lines = content.splitlines()
+        
+        comment_lines = 0
+        code_lines = 0
+        in_multiline = False
+        
+        for line in lines:
+            stripped = line.strip()
+            
+            # Skip empty lines
+            if not stripped:
+                continue
+                
+            # Handle multiline comments
+            if stripped.startswith('"""') or stripped.startswith("'''"):
+                if in_multiline:
+                    in_multiline = False
+                else:
+                    in_multiline = True
+                comment_lines += 1
+                continue
+                
+            # Count comment and code lines
+            if in_multiline:
+                comment_lines += 1
+            elif stripped.startswith('#'):
+                comment_lines += 1
+            else:
+                code_lines += 1
+        
+        total_lines = comment_lines + code_lines
+        return round(comment_lines / total_lines, 2) if total_lines > 0 else 0.0
         return duplication
 
     def _calculate_comment_ratio(self, module: Dict) -> float:

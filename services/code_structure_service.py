@@ -42,6 +42,8 @@ class StructureInfo:
     dependencies: List[str]
     code_smells: Sequence[CodeSmell]
     api_stability: APIStabilityInfo
+    inheritance: Optional[Dict] = None  # Only for classes
+    method_complexity: Optional[Dict[str, ComplexityMetrics]] = None  # Only for classes
 
 @dataclass
 class AnalysisResult:
@@ -123,15 +125,29 @@ class CodeStructureService:
                     # Check API stability
                     api_stability = self._check_api_stability(node)
                     
-                    # Create structure info
-                    structure_info = StructureInfo(
-                        name=node.name,
-                        type='class' if isinstance(node, ast.ClassDef) else 'function',
-                        complexity=complexity,
-                        dependencies=dependencies,
-                        code_smells=all_smells,
-                        api_stability=api_stability
-                    )
+                    # Create structure info with enhanced analysis
+                    if isinstance(node, ast.ClassDef):
+                        inheritance_info = self._analyze_inheritance(node)
+                        method_complexity = self._analyze_method_complexity(node)
+                        structure_info = StructureInfo(
+                            name=node.name,
+                            type='class',
+                            complexity=complexity,
+                            dependencies=dependencies,
+                            code_smells=all_smells,
+                            api_stability=api_stability,
+                            inheritance=inheritance_info,
+                            method_complexity=method_complexity
+                        )
+                    else:
+                        structure_info = StructureInfo(
+                            name=node.name,
+                            type='function',
+                            complexity=complexity,
+                            dependencies=dependencies,
+                            code_smells=all_smells,
+                            api_stability=api_stability
+                        )
                     structures.append(structure_info)
                     
                     # Update total complexity
@@ -322,6 +338,17 @@ class CodeStructureService:
                 })
         
         # Check for long parameter list
+        if isinstance(node, ast.FunctionDef):
+            args_count = len(node.args.args)
+            if args_count > 5:
+                smells.append({
+                    'type': 'long_parameter_list',
+                    'description': f'Function has too many parameters ({args_count})',
+                    'severity': 'medium',
+                    'location': f'Line {node.lineno}'
+                })
+        
+        return smells
     def _empty_result(self) -> AnalysisResult:
         """Create an empty analysis result"""
         return AnalysisResult(
@@ -368,3 +395,40 @@ class CodeStructureService:
             'has_breaking_changes': has_breaking_changes,
             'version_info': version_info
         }
+    def _analyze_inheritance(self, node: ast.ClassDef) -> Dict:
+        """Analyze class inheritance patterns"""
+        inheritance_info = {
+            'bases': [],
+            'depth': 0,
+            'multiple_inheritance': False
+        }
+        
+        if not isinstance(node, ast.ClassDef):
+            return inheritance_info
+            
+        # Get base classes
+        bases = []
+        for base in node.bases:
+            if isinstance(base, ast.Name):
+                bases.append(base.id)
+            elif isinstance(base, ast.Attribute):
+                bases.append(self._get_attribute_chain(base))
+                
+        inheritance_info['bases'] = bases
+        inheritance_info['multiple_inheritance'] = len(bases) > 1
+        inheritance_info['depth'] = len(bases)
+        
+        return inheritance_info
+
+    def _analyze_method_complexity(self, node: ast.ClassDef) -> Dict[str, ComplexityMetrics]:
+        """Analyze complexity of class methods"""
+        method_complexity = {}
+        
+        if not isinstance(node, ast.ClassDef):
+            return method_complexity
+            
+        for child in node.body:
+            if isinstance(child, ast.FunctionDef):
+                method_complexity[child.name] = self._calculate_complexity(child)
+                
+        return method_complexity

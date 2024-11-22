@@ -1,5 +1,5 @@
 import anthropic
-from typing import Dict, List, Union, Any
+from typing import Dict, List, Union, Any, Optional
 import logging
 import json
 import re

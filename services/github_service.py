@@ -139,7 +139,7 @@ class GitHubService:
                     'additions': f.additions,
                     'deletions': f.deletions,
                     'changes': f.changes,
-                    'patch': f.patch
+                    'patch': f.patch if f.patch else ''
                 })
             return files_data
         except GithubException as e:

@@ -1,6 +1,6 @@
 import os
 import logging
-from aioflask import Flask, flash, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, flash, render_template, request, redirect, url_for, session, jsonify
 from flask_cors import CORS
 from asgiref.sync import sync_to_async
 from database import db
