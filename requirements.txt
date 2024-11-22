@@ -57,3 +57,4 @@ uvicorn
 jinja2
 python-multipart
 aiofiles
+esprima

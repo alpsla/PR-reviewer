@@ -1,0 +1,200 @@
+from github import Github
+from github.GithubException import GithubException
+from github.PullRequest import PullRequest
+from github.Repository import Repository
+from typing import Dict, List, Optional, TypedDict, Union
+import logging
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+class PRDetails(TypedDict):
+    owner: str
+    repo: str
+    number: int
+
+class FileData(TypedDict):
+    filename: str
+    status: str
+    additions: int
+    deletions: int
+    changes: int
+    patch: Optional[str]
+    content_type: Optional[str]
+    language: Optional[str]
+
+class CommentData(TypedDict):
+    user: str
+    body: str
+    created_at: datetime
+    html_url: str
+
+class PRData(TypedDict):
+    title: str
+    body: Optional[str]
+    state: str
+    commits: int
+    changed_files: int
+    additions: int
+    deletions: int
+    created_at: datetime
+    updated_at: datetime
+    head_branch: str
+    base_branch: str
+    author: str
+
+class GitHubService:
+    def __init__(self, token: str):
+        """Initialize GitHub service with enhanced validation"""
+        self.token_valid = False
+        self.github = None
+        self.user_login: Optional[str] = None
+        
+        if not token or not isinstance(token, str):
+            logger.warning("No valid GitHub token provided")
+            return
+            
+        try:
+            self.github = Github(token)
+            self._basic_validation()
+        except Exception as e:
+            logger.error(f"Failed to initialize GitHub client: {str(e)}")
+    
+    def _basic_validation(self) -> None:
+        """Enhanced validation with rate limit check"""
+        try:
+            if not self.github:
+                return
+
+            # Test basic access and rate limits
+            rate_limit = self.github.get_rate_limit()
+            core_remaining = rate_limit.core.remaining
+            logger.info(f"GitHub API rate limit remaining: {core_remaining}")
+
+            if core_remaining < 100:
+                logger.warning(f"Low GitHub API rate limit: {core_remaining} remaining")
+
+            user = self.github.get_user()
+            self.user_login = user.login
+            logger.info(f"Authenticated as GitHub user: {self.user_login}")
+            self.token_valid = True
+            
+        except GithubException as e:
+            self._handle_github_exception("Token validation", e)
+            self.token_valid = False
+            
+        except Exception as e:
+            logger.error(f"Failed to validate GitHub token: {str(e)}")
+            self.token_valid = False
+
+    def _verify_pr_details(self, pr_details: Dict) -> None:
+        """Verify required PR details are present"""
+        required_keys = {'owner', 'repo', 'number'}
+        if not all(key in pr_details for key in required_keys):
+            raise ValueError(f"Missing required PR details. Required: {required_keys}")
+        
+        if not isinstance(pr_details['number'], int):
+            raise ValueError("PR number must be an integer")
+
+    def _handle_github_exception(self, operation: str, error: GithubException) -> None:
+        """Centralized GitHub exception handling"""
+        status_code = getattr(error, 'status', None)
+        if status_code == 401:
+            logger.error(f"{operation} failed: Invalid credentials")
+        elif status_code == 403:
+            logger.error(f"{operation} failed: Access forbidden - {self._get_scope_message(error)}")
+        elif status_code == 404:
+            logger.error(f"{operation} failed: Resource not found")
+        elif status_code == 422:
+            logger.error(f"{operation} failed: Validation failed - {str(error)}")
+        else:
+            logger.error(f"{operation} failed: {str(error)}")
+        raise ValueError(f"GitHub API {operation.lower()} failed: {str(error)}")
+
+    async def fetch_pr_files(self, pr_details: PRDetails) -> List[FileData]:
+        """Fetches files changed in the PR with enhanced error handling and typing"""
+        if not self.github or not self.token_valid:
+            raise ValueError("GitHub token not configured or invalid")
+            
+        self._verify_pr_details(pr_details)
+            
+        try:
+            repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
+            pr = repo.get_pull(pr_details['number'])
+            
+            if not pr:
+                raise ValueError(f"Pull request #{pr_details['number']} not found")
+            
+            files_data: List[FileData] = []
+            for file in pr.get_files():
+                # Detect file type and language
+                content_type = self._detect_content_type(file.filename)
+                language = self._detect_language(file.filename)
+                
+                files_data.append({
+                    'filename': file.filename,
+                    'status': file.status,
+                    'additions': file.additions,
+                    'deletions': file.deletions,
+                    'changes': file.changes,
+                    'patch': file.patch if hasattr(file, 'patch') else None,
+                    'content_type': content_type,
+                    'language': language
+                })
+                
+            return files_data
+
+        except GithubException as e:
+            self._handle_github_exception("File fetch", e)
+            
+        except Exception as e:
+            logger.error(f"Unexpected error fetching PR files: {str(e)}")
+            raise ValueError(f"Failed to fetch PR files: {str(e)}")
+
+    def _detect_content_type(self, filename: str) -> str:
+        """Detect file content type based on extension"""
+        extension = filename.lower().split('.')[-1] if '.' in filename else ''
+        content_types = {
+            'py': 'Python source',
+            'js': 'JavaScript source',
+            'tsx': 'TypeScript React',
+            'jsx': 'React',
+            'html': 'HTML',
+            'css': 'CSS',
+            'json': 'JSON',
+            'md': 'Markdown',
+            'yml': 'YAML',
+            'yaml': 'YAML',
+            'sql': 'SQL',
+            'sh': 'Shell script',
+            'brs': 'BrightScript'
+        }
+        return content_types.get(extension, 'Unknown')
+
+    def _detect_language(self, filename: str) -> Optional[str]:
+        """Detect programming language based on filename patterns"""
+        extension = filename.lower().split('.')[-1] if '.' in filename else ''
+        languages = {
+            'py': 'Python',
+            'js': 'JavaScript',
+            'ts': 'TypeScript',
+            'tsx': 'TypeScript',
+            'jsx': 'JavaScript',
+            'java': 'Java',
+            'rb': 'Ruby',
+            'php': 'PHP',
+            'go': 'Go',
+            'rs': 'Rust',
+            'cpp': 'C++',
+            'c': 'C',
+            'cs': 'C#',
+            'swift': 'Swift',
+            'kt': 'Kotlin',
+            'brs': 'BrightScript'
+        }
+        return languages.get(extension)
