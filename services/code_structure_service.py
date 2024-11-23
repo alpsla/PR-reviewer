@@ -493,31 +493,23 @@ class CodeStructureService:
     def _analyze_documentation(self, content: str, filename: str) -> Dict[str, Any]:
         """Analyze documentation quality and coverage with support for multiple doc styles."""
         try:
-            # Initialize documentation analyzer if not already done
             if not hasattr(self, 'doc_analyzer'):
                 from services.code_analysis.analyzers.documentation_analyzer import DocumentationAnalyzer
                 self.doc_analyzer = DocumentationAnalyzer()
                 self.doc_analyzer.initialize()
-                logger.info("Documentation analyzer initialized")
 
-            # Execute documentation analysis
             doc_metrics = self.doc_analyzer.analyze_documentation(content, filename)
             if not doc_metrics:
                 return self._empty_doc_info('No documentation found')
-
-            # Convert to standardized format
-            result = {
-                'module_doc': getattr(doc_metrics, 'module_doc', None),
-                'classes': getattr(doc_metrics, 'classes', {}),
-                'functions': getattr(doc_metrics, 'functions', {}),
-                'coverage': getattr(doc_metrics, 'coverage', 0.0),
-                'quality_score': getattr(doc_metrics, 'quality_score', 0.0),
-                'error': getattr(doc_metrics, 'error', None)
+            
+            return {
+                'module_doc': doc_metrics.module_doc,
+                'classes': doc_metrics.classes,
+                'functions': doc_metrics.functions,
+                'coverage': doc_metrics.coverage,
+                'quality_score': doc_metrics.quality_score,
+                'error': doc_metrics.error
             }
-
-            logger.info(f"Documentation analysis completed for {filename}")
-            return result
-
         except Exception as e:
             logger.error(f"Documentation analysis failed: {str(e)}")
             return self._empty_doc_info(str(e))
