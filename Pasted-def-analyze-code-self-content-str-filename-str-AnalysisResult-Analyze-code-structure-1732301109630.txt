@@ -1,0 +1,57 @@
+def analyze_code(self, content: str, filename: str) -> AnalysisResult:
+    """Analyze code structure with enhanced multi-language support and error handling"""
+    logger.info(f"Starting analysis for file: {filename}")
+
+    try:
+        # Check cache first
+        cache_key = self._get_cache_key(content, filename)
+        if cache_key in self.metrics_cache:
+            cached = self.metrics_cache[cache_key]
+            if (datetime.utcnow() - cached['timestamp']).total_seconds() < 3600:
+                logger.info(f"Using cached analysis for {filename}")
+                return cached['result']
+
+        # Input validation and empty content check
+        if not content or not content.strip():
+            logger.info(f"Empty or invalid content for {filename}")
+            return self._empty_result()
+
+        # Get language configuration
+        ext = Path(filename).suffix.lower()
+        language_config = None
+        for lang_config in LANGUAGE_CONFIGS.values():
+            if ext in lang_config.extensions:
+                language_config = lang_config
+                break
+
+        if not language_config:
+            logger.warning(f"Unsupported file type: {filename}")
+            return self._empty_result()
+
+        logger.info(f"Using {language_config.name} analyzer for {filename}")
+
+        # Basic metrics using file analyzer
+        file_analyzer = FileAnalyzer(content, language_config.name)
+        metrics = file_analyzer.analyze()
+
+        # Language-specific analysis
+        if language_config.name == 'Python':
+            result = self._analyze_python_enhanced(content, filename, metrics)
+        elif language_config.name in ('JavaScript', 'TypeScript'):
+            result = self._analyze_javascript_enhanced(content, filename, metrics)
+        else:
+            result = self._analyze_generic(content, filename, metrics)
+
+        # Add security and performance metrics
+        result.security_metrics = file_analyzer._analyze_security(content, language_config)
+        result.performance_metrics = file_analyzer._analyze_performance(content, language_config)
+        result.documentation_metrics = self._analyze_documentation(content, filename)
+
+        # Cache and return result
+        self._store_result(cache_key, result)
+        logger.info(f"Analysis completed successfully for {filename}")
+        return result
+
+    except Exception as e:
+        logger.error(f"Error during analysis: {str(e)}")
+        return self._empty_result()

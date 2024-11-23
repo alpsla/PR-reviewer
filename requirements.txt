@@ -64,3 +64,4 @@ mypy
 pylint
 docstring-parser
 pydocstyle
+typing-extensions

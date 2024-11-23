@@ -3,6 +3,21 @@ import math
 import re
 from datetime import datetime
 import logging
+from typing import Dict, Any, Optional, NamedTuple, List, Union, Set, TypedDict
+from pathlib import Path
+from dataclasses import dataclass, field
+import concurrent.futures
+import tempfile
+import subprocess
+import json
+from functools import lru_cache
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(pathname)s:%(lineno)d] - %(message)s'
+)
+logger = logging.getLogger(__name__)
 import concurrent.futures
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, TypedDict, Union, Set, Any
@@ -424,23 +439,101 @@ class CodeStructureService:
                 content, language_config)
 
             # Add documentation metrics
-            result.documentation_metrics = self._analyze_documentation(
-                content, filename)
-
-            # Cache the result
+            doc_metrics = self._analyze_documentation(content, filename)
+            if doc_metrics:
+                result.documentation_metrics = {
+                    'module_doc': doc_metrics.module_doc,
+                    'classes': doc_metrics.classes,
+                    'functions': doc_metrics.functions,
+                    'coverage': doc_metrics.coverage,
+                    'quality_score': doc_metrics.quality_score,
+                    'error': doc_metrics.error
+                }
+            
+            # Cache and return result
             self._store_result(cache_key, result)
             logger.info(f"Analysis completed successfully for {filename}")
             return result
-
-        except SyntaxError as e:
-            logger.error(f"Syntax error in {filename}: {str(e)}")
-            return self._empty_result()
+            
         except Exception as e:
             logger.error(f"Error during analysis: {str(e)}")
             return self._empty_result()
 
-    def _analyze_javascript_enhanced(self, content: str, filename: str,
-                                     metrics: Dict) -> AnalysisResult:
+    def _analyze_documentation(self, content: str, filename: str) -> Dict[str, Any]:
+        """Analyze documentation quality and coverage with support for multiple doc styles."""
+        try:
+            if not hasattr(self, 'doc_analyzer'):
+                from services.code_analysis.analyzers.documentation_analyzer import DocumentationAnalyzer
+                self.doc_analyzer = DocumentationAnalyzer()
+                self.doc_analyzer.initialize()
+                logger.info("Documentation analyzer initialized")
+
+            # Execute documentation analysis
+            doc_metrics = self.doc_analyzer.analyze_documentation(content, filename)
+            if not doc_metrics:
+                return self._empty_doc_info('No documentation found')
+
+            # Convert to standardized format
+            result = {
+                'module_doc': doc_metrics.module_doc,
+                'classes': doc_metrics.classes,
+                'functions': doc_metrics.functions,
+                'coverage': doc_metrics.coverage,
+                'quality_score': doc_metrics.quality_score,
+                'error': doc_metrics.error
+            }
+
+            logger.info(f"Documentation analysis completed for {filename}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Documentation analysis failed: {str(e)}")
+            return self._empty_doc_info(str(e))
+
+    def _analyze_documentation(self, content: str, filename: str) -> Dict[str, Any]:
+        """Analyze documentation quality and coverage with support for multiple doc styles."""
+        try:
+            # Initialize documentation analyzer if not already done
+            if not hasattr(self, 'doc_analyzer'):
+                from services.code_analysis.analyzers.documentation_analyzer import DocumentationAnalyzer
+                self.doc_analyzer = DocumentationAnalyzer()
+                self.doc_analyzer.initialize()
+                logger.info("Documentation analyzer initialized")
+
+            # Execute documentation analysis
+            doc_metrics = self.doc_analyzer.analyze_documentation(content, filename)
+            if not doc_metrics:
+                return self._empty_doc_info('No documentation found')
+
+            # Convert to standardized format
+            result = {
+                'module_doc': getattr(doc_metrics, 'module_doc', None),
+                'classes': getattr(doc_metrics, 'classes', {}),
+                'functions': getattr(doc_metrics, 'functions', {}),
+                'coverage': getattr(doc_metrics, 'coverage', 0.0),
+                'quality_score': getattr(doc_metrics, 'quality_score', 0.0),
+                'error': getattr(doc_metrics, 'error', None)
+            }
+
+            logger.info(f"Documentation analysis completed for {filename}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Documentation analysis failed: {str(e)}")
+            return self._empty_doc_info(str(e))
+
+    def _empty_doc_info(self, error_message: Optional[str] = None) -> Dict[str, Any]:
+        """Create an empty documentation info structure."""
+        return {
+            'module_doc': None,
+            'classes': {},
+            'functions': {},
+            'coverage': 0.0,
+            'quality_score': 0.0,
+            'error': error_message if error_message else 'No documentation available'
+        }
+
+    def _analyze_javascript(self, content: str, filename: str) -> AnalysisResult:
         """Analyze JavaScript/TypeScript code structure."""
         try:
             # Basic structure analysis
@@ -460,291 +553,34 @@ class CodeStructureService:
             # Calculate complexity metrics
             total_complexity = ComplexityMetrics(
                 cyclomatic_complexity=metrics.get('CCN', 0),
-                cognitive_complexity=len(
-                    re.findall(r'\b(if|while|for|switch)\b', content)),
+                cognitive_complexity=len(re.findall(r'\b(if|while|for|switch)\b', content)),
                 nesting_depth=self._calculate_nesting_depth(content),
                 maintainability_index=100.0  # Default value
             )
 
-            return AnalysisResult(structures=structures,
-                                  imports=list(set(imports)),
-                                  total_complexity=total_complexity)
+            # Add documentation analysis
+            doc_analysis = self._analyze_documentation(content, filename)
+
+            return AnalysisResult(
+                structures=structures,
+                imports=list(set(imports)),
+                total_complexity=total_complexity,
+                documentation_metrics=doc_analysis
+            )
 
         except Exception as e:
-            logger.error(
-                f"Error analyzing JavaScript file {filename}: {str(e)}")
+            logger.error(f"Error analyzing JavaScript file {filename}: {str(e)}")
             return self._empty_result()
-
-    def _analyze_documentation(self, content: str,
-                               filename: str) -> Dict[str, Any]:
-        """Analyze documentation quality and coverage."""
-        doc_info = {
-            'module_doc': None,
-            'classes': {},
-            'functions': {},
-            'coverage': 0.0,
-            'quality_score': 0.0,
-            'error': None
-        }
-
-        try:
-            tree = ast.parse(content)
-            doc_info['module_doc'] = ast.get_docstring(tree)
-
-            total_elements = 1  # Module
-            documented_elements = 1 if doc_info['module_doc'] else 0
-
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef):
-                    total_elements += 1
-                    doc_info['classes'][node.name] = {
-                        'docstring': ast.get_docstring(node),
-                        'methods': {}
-                    }
-                    if doc_info['classes'][node.name]['docstring']:
-                        documented_elements += 1
-
-                    for method in node.body:
-                        if isinstance(method, ast.FunctionDef):
-                            total_elements += 1
-                            doc_info['classes'][node.name]['methods'][
-                                method.name] = {
-                                    'docstring': ast.get_docstring(method)
-                                }
-                            if doc_info['classes'][node.name]['methods'][
-                                    method.name]['docstring']:
-                                documented_elements += 1
-
-                elif isinstance(node, ast.FunctionDef):
-                    total_elements += 1
-                    doc_info['functions'][node.name] = {
-                        'docstring': ast.get_docstring(node)
-                    }
-                    if doc_info['functions'][node.name]['docstring']:
-                        documented_elements += 1
-
-            doc_info['coverage'] = (documented_elements / total_elements *
-                                    100) if total_elements > 0 else 0.0
-            doc_info['quality_score'] = self._calculate_doc_quality(doc_info)
-
-        except Exception as e:
-            logger.error(
-                f"Error analyzing documentation in {filename}: {str(e)}")
-            doc_info['error'] = str(e)
-
-        return doc_info
-
-    def _calculate_doc_quality(self, doc_info: Dict) -> float:
-        """Calculate documentation quality score."""
-        total_score = 0
-        total_docs = 0
-
-        def score_docstring(docstring: Optional[str]) -> float:
-            if not docstring:
-                return 0
-
-            score = 0
-            # Length score (up to 40 points)
-            score += min(len(docstring.split()) / 10, 4) * 10
-
-            # Parameters and returns (20 points each)
-            if ':param' in docstring or '@param' in docstring:
-                score += 20
-            if ':return' in docstring or '@returns' in docstring:
-                score += 20
-
-            # Examples and usage (20 points)
-            if 'Example' in docstring or 'Usage' in docstring:
-                score += 20
-
-            return score
-
-        # Score module docstring
-        if doc_info['module_doc']:
-            total_score += score_docstring(doc_info['module_doc'])
-            total_docs += 1
-
-        # Score class docstrings
-        for class_info in doc_info['classes'].values():
-            if class_info['docstring']:
-                total_score += score_docstring(class_info['docstring'])
-                total_docs += 1
-
-            # Score method docstrings
-            for method_info in class_info['methods'].values():
-                if method_info['docstring']:
-                    total_score += score_docstring(method_info['docstring'])
-                    total_docs += 1
-
-        # Score function docstrings
-        for func_info in doc_info['functions'].values():
-            if func_info['docstring']:
-                total_score += score_docstring(func_info['docstring'])
-                total_docs += 1
-
-        return (total_score / total_docs) if total_docs > 0 else 0
-
-    def _analyze_documentation(self, content: str, filename: str) -> Dict[str, Any]:
-        """Analyze documentation quality and coverage with support for multiple doc styles."""
-        doc_info = {
-            'module_doc': None,
-            'classes': {},
-            'functions': {},
-            'coverage': 0.0,
-            'quality_score': 0.0,
-            'error': None
-        }
-
-        try:
-            tree = ast.parse(content)
-            doc_info['module_doc'] = ast.get_docstring(tree)
-
-            total_elements = 1  # Module
-            documented_elements = 1 if doc_info['module_doc'] else 0
-
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef):
-                    total_elements += 1
-                    doc_info['classes'][node.name] = {
-                        'docstring': ast.get_docstring(node),
-                        'methods': {},
-                        'quality_score': 0.0
-                    }
-                    if doc_info['classes'][node.name]['docstring']:
-                        documented_elements += 1
-                        doc_info['classes'][node.name]['quality_score'] = self._calculate_doc_quality(doc_info['classes'][node.name]['docstring'])
-
-                    for method in node.body:
-                        if isinstance(method, ast.FunctionDef):
-                            total_elements += 1
-                            method_doc = ast.get_docstring(method)
-                            doc_info['classes'][node.name]['methods'][method.name] = {
-                                'docstring': method_doc,
-                                'quality_score': self._calculate_doc_quality(method_doc) if method_doc else 0.0
-                            }
-                            if method_doc:
-                                documented_elements += 1
-
-                elif isinstance(node, ast.FunctionDef):
-                    total_elements += 1
-                    func_doc = ast.get_docstring(node)
-                    doc_info['functions'][node.name] = {
-                        'docstring': func_doc,
-                        'quality_score': self._calculate_doc_quality(func_doc) if func_doc else 0.0
-                    }
-                    if func_doc:
-                        documented_elements += 1
-
-            doc_info['coverage'] = (documented_elements / total_elements * 100) if total_elements > 0 else 0.0
-            doc_info['quality_score'] = self._calculate_overall_doc_quality(doc_info)
-
-        except Exception as e:
-            logger.error(f"Error analyzing documentation in {filename}: {str(e)}")
-            doc_info['error'] = str(e)
-
-        return doc_info
-
-    def _calculate_doc_quality(self, docstring: Optional[str]) -> float:
-        """Calculate quality score for a single docstring."""
-        if not docstring:
-            return 0.0
             
-        score = 0.0
-        max_score = 100.0
-        
-        # Check for sections
-        sections = {
-            'args': 5.0,
-            'returns': 5.0,
-            'raises': 5.0,
-            'example': 10.0,
-            'note': 5.0,
-            'warning': 5.0
-        }
-        
-        for section, points in sections.items():
-            if f":{section}:" in docstring.lower():
-                score += points
-                
-        # Check length and content
-        words = docstring.split()
-        if len(words) >= 10:  # Basic description
-            score += 20.0
-        if len(words) >= 30:  # Detailed description
-            score += 10.0
             
-        # Check for code examples
-        if ">>>" in docstring or "```" in docstring:
-            score += 15.0
-            
-        # Check for parameter descriptions
-        if ":param" in docstring or "@param" in docstring:
-            score += 15.0
-            
-        # Check for return type documentation
-        if ":return:" in docstring or "@return" in docstring:
-            score += 10.0
-            
-        return min(score, max_score)
 
-    def _calculate_overall_doc_quality(self, doc_info: Dict) -> float:
-        """Calculate overall documentation quality score."""
-        total_score = 0.0
-        total_elements = 0
-        
-        # Module docstring
-        if doc_info.get('module_doc'):
-            total_score += self._calculate_doc_quality(doc_info['module_doc'])
-            total_elements += 1
-            
-        # Class docstrings
-        for class_info in doc_info.get('classes', {}).values():
-            if class_info.get('docstring'):
-                total_score += class_info['quality_score']
-                total_elements += 1
-                
-            # Method docstrings
-            for method_info in class_info.get('methods', {}).values():
-                if method_info.get('docstring'):
-                    total_score += method_info['quality_score']
-                    total_elements += 1
-                    
-        # Function docstrings
-        for func_info in doc_info.get('functions', {}).values():
-            if func_info.get('docstring'):
-                total_score += func_info['quality_score']
-                total_elements += 1
-                
-        return (total_score / total_elements) if total_elements > 0 else 0.0
+    
 
-    def _calculate_doc_coverage(self, result: AnalysisResult) -> float:
-        """Calculate documentation coverage percentage."""
-        if not result.documentation_metrics:
-            return 0.0
-            
-        doc_info = result.documentation_metrics
-        total_elements = 1  # Start with module
-        documented_elements = 1 if doc_info.get('module_doc') else 0
-        
-        # Count classes and their methods
-        for class_info in doc_info.get('classes', {}).values():
-            total_elements += 1
-            if class_info.get('docstring'):
-                documented_elements += 1
-                
-            # Count methods
-            for method_info in class_info.get('methods', {}).values():
-                total_elements += 1
-                if method_info.get('docstring'):
-                    documented_elements += 1
-                    
-        # Count standalone functions
-        for func_info in doc_info.get('functions', {}).values():
-            total_elements += 1
-            if func_info.get('docstring'):
-                documented_elements += 1
-                
-        return (documented_elements / total_elements * 100) if total_elements > 0 else 0.0
+    
+
+    
+
+    
 
     def _analyze_generic(self, content: str, filename: str, metrics: Dict) -> AnalysisResult:
         """Generic analysis for unsupported languages"""
@@ -764,9 +600,8 @@ class CodeStructureService:
                               imports=imports,
                               total_complexity=total_complexity)
 
-    def _analyze_python_enhanced(self, content: str, filename: str,
-                                 metrics: Dict) -> AnalysisResult:
-        """Analyze Python code structure with enhanced documentation analysis"""
+    def _analyze_python(self, content: str, filename: str) -> AnalysisResult:
+        """Analyze Python code structure with documentation analysis"""
         try:
             tree = ast.parse(content)
             structures = []
@@ -782,118 +617,79 @@ class CodeStructureService:
 
                         if isinstance(node, ast.ClassDef):
                             structures.append({
-                                'type':
-                                'class',
-                                'name':
-                                node.name,
-                                'complexity':
-                                complexity,
-                                'methods':
-                                self._analyze_method_complexity(node),
-                                'inheritance':
-                                self._analyze_inheritance(node),
-                                'api_stability':
-                                self._check_api_stability(node)
+                                'type': 'class',
+                                'name': node.name,
+                                'complexity': complexity,
+                                'methods': self._analyze_method_complexity(node),
+                                'inheritance': self._analyze_inheritance(node),
+                                'api_stability': self._check_api_stability(node)
                             })
                         else:
                             structures.append({
-                                'type':
-                                'function',
-                                'name':
-                                node.name,
-                                'complexity':
-                                complexity,
-                                'code_smells':
-                                self._detect_code_smells(node),
-                                'api_stability':
-                                self._check_api_stability(node)
+                                'type': 'function',
+                                'name': node.name,
+                                'complexity': complexity,
+                                'code_smells': self._detect_code_smells(node),
+                                'api_stability': self._check_api_stability(node)
                             })
                     elif isinstance(node, (ast.Import, ast.ImportFrom)):
                         imports.extend(self._extract_imports(node))
 
                 except Exception as e:
-                    logger.error(
-                        f"Error analyzing node in {filename}: {str(e)}")
+                    logger.error(f"Error analyzing node in {filename}: {str(e)}")
                     continue
 
             # Add documentation analysis
             doc_analysis = self._analyze_documentation(content, filename)
 
-            return AnalysisResult(structures=structures,
-                                  imports=imports,
-                                  total_complexity=total_complexity,
-                                  documentation_metrics=doc_analysis)
+            return AnalysisResult(
+                structures=structures,
+                imports=imports,
+                total_complexity=total_complexity,
+                documentation_metrics=doc_analysis
+            )
 
         except Exception as e:
             logger.error(f"Error in Python analysis for {filename}: {str(e)}")
             return self._empty_result()
 
-    def _analyze_javascript(self, content: str,
-                            filename: str) -> AnalysisResult:
-        """Analyze JavaScript/TypeScript code structure"""
+    def _analyze_javascript(self, content: str, filename: str) -> AnalysisResult:
+        """Analyze JavaScript/TypeScript code structure."""
         try:
-            import esprima
-            tree = esprima.parseModule(content, {'loc': True, 'comment': True})
-
+            # Basic structure analysis
             structures = []
             imports = []
-            total_complexity = ComplexityMetrics()
 
-            for node in self._walk_js_ast(tree):
-                try:
-                    if node.type in {
-                            'FunctionDeclaration', 'MethodDefinition',
-                            'ClassDeclaration'
-                    }:
-                        complexity = self._calculate_js_complexity(node)
-                        total_complexity.update(complexity)
+            # Parse imports using regex
+            import_patterns = [
+                r'import\s+.*\s+from\s+[\'"]([^\'"]+)[\'"]',
+                r'require\([\'"]([^\'"]+)[\'"]\)',
+                r'import\([\'"]([^\'"]+)[\'"]\)'
+            ]
 
-                        if node.type == 'ClassDeclaration':
-                            structures.append({
-                                'type':
-                                'class',
-                                'name':
-                                node.id.name,
-                                'complexity':
-                                complexity,
-                                'methods':
-                                self._analyze_js_method_complexity(node),
-                                'inheritance':
-                                self._analyze_js_inheritance(node),
-                                'api_stability':
-                                self._check_js_api_stability(node)
-                            })
-                        else:
-                            structures.append({
-                                'type':
-                                'function',
-                                'name':
-                                getattr(node, 'id',
-                                        {}).get('name', 'anonymous'),
-                                'complexity':
-                                complexity,
-                                'code_smells':
-                                self._detect_js_code_smells(node),
-                                'api_stability':
-                                self._check_js_api_stability(node)
-                            })
+            for pattern in import_patterns:
+                imports.extend(re.findall(pattern, content))
 
-                except Exception as e:
-                    logger.error(
-                        f"Error analyzing JavaScript node in {filename}: {str(e)}"
-                    )
-                    continue
+            # Calculate complexity metrics
+            total_complexity = ComplexityMetrics(
+                cyclomatic_complexity=self._calculate_cyclomatic_complexity(content),
+                cognitive_complexity=self._calculate_cognitive_complexity(content),
+                nesting_depth=self._calculate_nesting_depth(content),
+                maintainability_index=100.0
+            )
 
-            # Find imports
-            imports.extend(self._find_js_imports(tree))
+            # Add documentation analysis
+            doc_analysis = self._analyze_documentation(content, filename)
 
-            return AnalysisResult(structures=structures,
-                                  imports=imports,
-                                  total_complexity=total_complexity)
+            return AnalysisResult(
+                structures=structures,
+                imports=list(set(imports)),
+                total_complexity=total_complexity,
+                documentation_metrics=doc_analysis
+            )
 
         except Exception as e:
-            logger.error(
-                f"Error in JavaScript analysis for {filename}: {str(e)}")
+            logger.error(f"Error analyzing JavaScript file {filename}: {str(e)}")
             return self._empty_result()
 
     def _calculate_complexity(
