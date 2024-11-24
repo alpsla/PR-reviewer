@@ -1,0 +1,381 @@
+```python
+# models/pr_models.py
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+from datetime import datetime
+
+@dataclass
+class PRFile:
+    """Represents a file in a PR"""
+    filename: str
+    status: str  # 'added', 'modified', 'removed'
+    additions: int
+    deletions: int
+    changes: int
+    patch: Optional[str] = None
+    language: Optional[str] = None
+    content_type: Optional[str] = None
+
+@dataclass
+class PRDetails:
+    """Details about a Pull Request"""
+    url: str
+    owner: str
+    repo: str
+    pr_number: int
+    title: str
+    description: str
+    author: str
+    created_at: datetime
+    updated_at: datetime
+    base_branch: str
+    head_branch: str
+    files: List[PRFile] = field(default_factory=list)
+    comments: List[Dict] = field(default_factory=list)
+
+@dataclass
+class AnalysisResult:
+    """Results of PR analysis"""
+    pr_details: PRDetails
+    code_quality: Dict
+    potential_issues: List[Dict]
+    security_considerations: List[Dict]
+    performance_implications: List[Dict]
+    suggestions: List[str]
+    analysis_timestamp: datetime = field(default_factory=datetime.now)
+```
+
+
+```python
+# core/exceptions.py
+class PRReviewException(Exception):
+    """Base exception for PR Review system"""
+    pass
+
+class InvalidPRURLException(PRReviewException):
+    """Raised when PR URL is invalid"""
+    def __init__(self, url: str, message: str = "Invalid PR URL"):
+        self.url = url
+        self.message = message
+        super().__init__(f"{message}: {url}")
+
+class GitHubAPIException(PRReviewException):
+    """Raised when GitHub API encounters an error"""
+    def __init__(self, message: str, status_code: Optional[int] = None):
+        self.status_code = status_code
+        super().__init__(f"GitHub API Error: {message}")
+
+class ClaudeAPIException(PRReviewException):
+    """Raised when Claude API encounters an error"""
+    def __init__(self, message: str, response_code: Optional[int] = None):
+        self.response_code = response_code
+        super().__init__(f"Claude API Error: {message}")
+
+class AnalysisException(PRReviewException):
+    """Raised when analysis fails"""
+    def __init__(self, message: str, context: Optional[Dict] = None):
+        self.context = context or {}
+        super().__init__(f"Analysis Error: {message}")
+```
+
+
+```python
+# core/pr_analyzer.py
+from typing import Dict, Optional
+import logging
+from datetime import datetime
+
+from models.pr_models import PRDetails, AnalysisResult
+from services.github_service import GitHubService
+from services.claude_service import ClaudeService
+from services.language_service import LanguageService
+from utils.url_parser import parse_pr_url
+from core.exceptions import PRReviewException, InvalidPRURLException
+
+logger = logging.getLogger(__name__)
+
+class PRAnalyzer:
+    """Core PR analysis orchestrator"""
+
+    def __init__(self, github_token: str, claude_api_key: str):
+        self.github_service = GitHubService(github_token)
+        self.claude_service = ClaudeService(claude_api_key)
+        self.language_service = LanguageService()
+
+    async def analyze_pr(self, pr_url: str) -> AnalysisResult:
+        """
+        Analyze a Pull Request from its URL
+        
+        Args:
+            pr_url: GitHub PR URL
+            
+        Returns:
+            AnalysisResult object containing the analysis
+            
+        Raises:
+            InvalidPRURLException: If PR URL is invalid
+            GitHubAPIException: If GitHub API request fails
+            ClaudeAPIException: If Claude API request fails
+            AnalysisException: If analysis fails
+        """
+        try:
+            # Parse PR URL
+            pr_info = parse_pr_url(pr_url)
+            if not pr_info:
+                raise InvalidPRURLException(pr_url)
+
+            # Fetch PR data from GitHub
+            logger.info(f"Fetching PR data for {pr_url}")
+            pr_data = await self.github_service.fetch_pr_data(pr_info)
+            pr_files = await self.github_service.fetch_pr_files(pr_info)
+            pr_comments = await self.github_service.fetch_pr_comments(pr_info)
+
+            # Create PRDetails object
+            pr_details = PRDetails(
+                url=pr_url,
+                owner=pr_info['owner'],
+                repo=pr_info['repo'],
+                pr_number=pr_info['number'],
+                title=pr_data['title'],
+                description=pr_data['body'] or '',
+                author=pr_data['user']['login'],
+                created_at=datetime.fromisoformat(pr_data['created_at'].rstrip('Z')),
+                updated_at=datetime.fromisoformat(pr_data['updated_at'].rstrip('Z')),
+                base_branch=pr_data['base']['ref'],
+                head_branch=pr_data['head']['ref'],
+                files=pr_files,
+                comments=pr_comments
+            )
+
+            # Detect languages
+            logger.info("Detecting languages in PR")
+            for file in pr_details.files:
+                file.language = self.language_service.detect_language(file.filename)
+                file.content_type = self.language_service.detect_content_type(file.filename)
+
+            # Analyze with Claude
+            logger.info("Analyzing PR with Claude")
+            analysis = await self.claude_service.analyze_pr(pr_details)
+
+            return AnalysisResult(
+                pr_details=pr_details,
+                code_quality=analysis.get('code_quality', {}),
+                potential_issues=analysis.get('potential_issues', []),
+                security_considerations=analysis.get('security_considerations', []),
+                performance_implications=analysis.get('performance_implications', []),
+                suggestions=analysis.get('suggestions', [])
+            )
+
+        except Exception as e:
+            logger.error(f"Error analyzing PR: {str(e)}")
+            raise
+
+    async def validate_pr_url(self, pr_url: str) -> bool:
+        """Validate GitHub PR URL"""
+        try:
+            pr_info = parse_pr_url(pr_url)
+            if not pr_info:
+                return False
+            return await self.github_service.validate_pr_exists(pr_info)
+        except Exception as e:
+            logger.error(f"Error validating PR URL: {str(e)}")
+            return False
+```
+
+
+```python
+# services/github_service.py
+import logging
+from typing import Dict, List, Optional
+from github import Github
+from github.PullRequest import PullRequest
+from core.exceptions import GitHubAPIException
+
+logger = logging.getLogger(__name__)
+
+class GitHubService:
+    """GitHub API service"""
+
+    def __init__(self, token: str):
+        self.github = Github(token)
+        self.token_valid = False
+        self._validate_token()
+
+    def _validate_token(self) -> None:
+        """Validate GitHub token"""
+        try:
+            user = self.github.get_user()
+            self.token_valid = bool(user)
+            logger.info(f"GitHub token validated for user: {user.login}")
+        except Exception as e:
+            logger.error(f"GitHub token validation failed: {str(e)}")
+            self.token_valid = False
+
+    async def fetch_pr_data(self, pr_info: Dict) -> Dict:
+        """Fetch PR data from GitHub"""
+        try:
+            repo = self.github.get_repo(f"{pr_info['owner']}/{pr_info['repo']}")
+            pr = repo.get_pull(pr_info['number'])
+            return self._convert_pr_to_dict(pr)
+        except Exception as e:
+            logger.error(f"Error fetching PR data: {str(e)}")
+            raise GitHubAPIException(str(e))
+
+    async def fetch_pr_files(self, pr_info: Dict) -> List[Dict]:
+        """Fetch files from PR"""
+        try:
+            repo = self.github.get_repo(f"{pr_info['owner']}/{pr_info['repo']}")
+            pr = repo.get_pull(pr_info['number'])
+            return [self._convert_file_to_dict(f) for f in pr.get_files()]
+        except Exception as e:
+            logger.error(f"Error fetching PR files: {str(e)}")
+            raise GitHubAPIException(str(e))
+
+    def _convert_pr_to_dict(self, pr: PullRequest) -> Dict:
+        """Convert GitHub PR object to dictionary"""
+        return {
+            'title': pr.title,
+            'body': pr.body,
+            'user': {'login': pr.user.login},
+            'created_at': pr.created_at.isoformat(),
+            'updated_at': pr.updated_at.isoformat(),
+            'base': {'ref': pr.base.ref},
+            'head': {'ref': pr.head.ref}
+        }
+
+    def _convert_file_to_dict(self, file) -> Dict:
+        """Convert GitHub file object to dictionary"""
+        return {
+            'filename': file.filename,
+            'status': file.status,
+            'additions': file.additions,
+            'deletions': file.deletions,
+            'changes': file.changes,
+            'patch': file.patch if hasattr(file, 'patch') else None
+        }
+
+# services/claude_service.py
+import logging
+from typing import Dict
+import anthropic
+from core.exceptions import ClaudeAPIException
+
+logger = logging.getLogger(__name__)
+
+class ClaudeService:
+    """Claude API service"""
+
+    def __init__(self, api_key: str):
+        self.client = anthropic.Client(api_key=api_key)
+
+    async def analyze_pr(self, pr_details: Dict) -> Dict:
+        """Analyze PR using Claude"""
+        try:
+            # Prepare prompt
+            prompt = self._build_analysis_prompt(pr_details)
+
+            # Get Claude's response
+            response = await self.client.messages.create(
+                model="claude-3-opus-20240229",
+                max_tokens=4096,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            # Parse and structure the response
+            return self._parse_claude_response(response)
+
+        except Exception as e:
+            logger.error(f"Claude analysis failed: {str(e)}")
+            raise ClaudeAPIException(str(e))
+
+    def _build_analysis_prompt(self, pr_details: Dict) -> str:
+        """Build analysis prompt for Claude"""
+        # Implementation will depend on your specific needs
+        pass
+
+    def _parse_claude_response(self, response: Dict) -> Dict:
+        """Parse Claude's response into structured format"""
+        # Implementation will depend on your specific needs
+        pass
+
+# services/language_service.py
+import logging
+from typing import Optional
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+class LanguageService:
+    """Language detection service"""
+
+    def __init__(self):
+        self.language_extensions = {
+            '.py': 'Python',
+            '.js': 'JavaScript',
+            '.jsx': 'JavaScript',
+            '.ts': 'TypeScript',
+            '.tsx': 'TypeScript',
+            '.java': 'Java',
+            '.rb': 'Ruby',
+            '.php': 'PHP',
+            '.go': 'Go',
+            '.rs': 'Rust',
+            '.cpp': 'C++',
+            '.c': 'C',
+            '.cs': 'C#',
+            '.swift': 'Swift',
+            '.kt': 'Kotlin',
+            '.brs': 'BrightScript'
+        }
+
+    def detect_language(self, filename: str) -> Optional[str]:
+        """Detect programming language from filename"""
+        ext = Path(filename).suffix.lower()
+        return self.language_extensions.get(ext)
+
+    def detect_content_type(self, filename: str) -> str:
+        """Detect content type of file"""
+        ext = Path(filename).suffix.lower()
+        content_types = {
+            '.py': 'Python source',
+            '.js': 'JavaScript source',
+            '.jsx': 'React component',
+            '.tsx': 'TypeScript React',
+            '.html': 'HTML',
+            '.css': 'CSS',
+            '.json': 'JSON',
+            '.md': 'Markdown',
+            '.yml': 'YAML',
+            '.yaml': 'YAML',
+            '.brs': 'BrightScript'
+        }
+        return content_types.get(ext, 'Unknown')
+```
+
+This implementation provides:
+
+1. **Core Models**:
+   - PR data structures
+   - Analysis results
+   - Type hints
+
+2. **Core Exceptions**:
+   - Specific exception types
+   - Detailed error messages
+   - Context preservation
+
+3. **PR Analyzer**:
+   - Main orchestration logic
+   - Service coordination
+   - Error handling
+
+4. **Services**:
+   - GitHub integration
+   - Claude integration
+   - Language detection
+
+Would you like me to:
+1. Add more details to any component?
+2. Add the URL parser implementation?
+3. Add more service methods?
+4. Add tests for these components?

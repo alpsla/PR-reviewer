@@ -1,0 +1,121 @@
+# plugins/documentation_parser.py
+from typing import Dict, Any, Optional
+import ast
+import re
+from pathlib import Path
+
+class DocumentationParser:
+    """Parser for code documentation with multi-language support"""
+    
+    def __init__(self):
+        self.initialized = False
+        self.parsers = {}
+    
+    def initialize(self) -> None:
+        """Initialize documentation parsers"""
+        self.parsers = {
+            'python': self._parse_python_docs,
+            'javascript': self._parse_js_docs,
+            'typescript': self._parse_js_docs
+        }
+        self.initialized = True
+
+    def execute_sync(self, data: Dict) -> Dict:
+        """Execute documentation parsing"""
+        if not self.initialized:
+            self.initialize()
+            
+        results = {'documentation': {}}
+        
+        for file_info in data['files']:
+            filename = file_info['filename']
+            content = file_info['content']
+            
+            # Determine language
+            ext = Path(filename).suffix.lower()
+            language = self._detect_language(ext)
+            
+            if language and language in self.parsers:
+                parser = self.parsers[language]
+                try:
+                    doc_info = parser(content)
+                    results['documentation'][filename] = doc_info
+                except Exception as e:
+                    results['documentation'][filename] = {
+                        'error': str(e),
+                        'module_doc': None,
+                        'classes': {},
+                        'functions': {},
+                        'coverage': 0.0,
+                        'quality_score': 0.0
+                    }
+            else:
+                results['documentation'][filename] = {
+                    'error': 'Unsupported language',
+                    'module_doc': None,
+                    'classes': {},
+                    'functions': {},
+                    'coverage': 0.0,
+                    'quality_score': 0.0
+                }
+                
+        return results
+
+    def _detect_language(self, extension: str) -> Optional[str]:
+        """Detect programming language from file extension"""
+        extension_map = {
+            '.py': 'python',
+            '.js': 'javascript',
+            '.jsx': 'javascript',
+            '.ts': 'typescript',
+            '.tsx': 'typescript'
+        }
+        return extension_map.get(extension)
+
+    def _parse_python_docs(self, content: str) -> Dict[str, Any]:
+        """Parse Python documentation"""
+        doc_info = {
+            'module_doc': None,
+            'classes': {},
+            'functions': {},
+            'docstrings': [],
+            'coverage': 0.0,
+            'quality_score': 0.0
+        }
+
+        try:
+            tree = ast.parse(content)
+            doc_info['module_doc'] = ast.get_docstring(tree)
+            total_elements = 1
+            documented_elements = 1 if doc_info['module_doc'] else 0
+
+            self._parse_python_module(tree, doc_info, total_elements, documented_elements)
+            
+        except Exception as e:
+            doc_info['error'] = str(e)
+            
+        return doc_info
+
+    def _parse_js_docs(self, content: str) -> Dict[str, Any]:
+        """Parse JavaScript/TypeScript documentation"""
+        doc_info = {
+            'module_doc': None,
+            'classes': {},
+            'functions': {},
+            'docstrings': [],
+            'coverage': 0.0,
+            'quality_score': 0.0
+        }
+
+        try:
+            # Parse JSDoc comments
+            jsdoc_pattern = r'/\*\*\s*(.*?)\s*\*/'
+            matches = re.finditer(jsdoc_pattern, content, re.DOTALL)
+            total_funcs = len(re.findall(r'\bfunction\b|\=>\s*{|\bclass\b', content))
+            
+            self._parse_js_comments(matches, total_funcs, doc_info)
+            
+        except Exception as e:
+            doc_info['error'] = str(e)
+            
+        return doc_info

@@ -1,0 +1,45 @@
+2024-11-21 18:05:23,404 - app - INFO - Fetching PR data from GitHub
+2024-11-21 18:05:24,098 - app - INFO - Analyzing PR with Claude
+2024-11-21 18:05:26,705 - services.claude_service - INFO - Running dependency analysis
+2024-11-21 18:05:26,706 - services.dependency_service - INFO - Processing Python file: app.py
+2024-11-21 18:05:26,706 - services.dependency_service - INFO - Processing file for analysis: app.py
+2024-11-21 18:05:26,706 - services.dependency_service - INFO - Processing Python file: services/claude_service.py
+2024-11-21 18:05:26,706 - services.dependency_service - INFO - Processing file for analysis: services/claude_service.py
+2024-11-21 18:05:26,706 - services.dependency_service - INFO - Processing Python file: services/dependency_service.py
+2024-11-21 18:05:26,706 - services.dependency_service - INFO - Processing file for analysis: services/dependency_service.py
+2024-11-21 18:05:26,706 - services.dependency_service - INFO - Processing Python file: services/github_service.py
+2024-11-21 18:05:26,706 - services.dependency_service - INFO - Processing file for analysis: services/github_service.py
+2024-11-21 18:05:26,706 - services.dependency_service - INFO - Processing JavaScript file: static/js/main.js
+2024-11-21 18:05:26,706 - services.dependency_service - INFO - Processing file for analysis: static/js/main.js
+2024-11-21 18:05:26,708 - services.dependency_service - INFO - Configuring dependency-cruiser analysis
+2024-11-21 18:05:26,709 - services.dependency_service - INFO - Successfully wrote dependency-cruiser configuration
+2024-11-21 18:05:27,587 - services.dependency_service - ERROR - dependency-cruiser failed: 
+  WARNING: You're running a globally installed dependency-cruiser.
+
+           We recommend to install and run it as a local devDependency in
+           your project instead. There it has your project's environment and
+           transpilers at its disposal. That will ensure it can find e.g.
+           TypeScript, Vue or Svelte modules and dependencies.
+
+
+  ERROR: Can't resolve 'dependency-cruiser/configs/recommended-strict' in '/tmp/tmpco3pr9zp'
+
+2024-11-21 18:05:28,473 - services.claude_service - INFO - Running code structure analysis
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for .replit
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for Pasted-import-React-useState-from-react-import-ChevronLeft-ExternalLink-Copy-Check-1731986573138.txt
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for app.py
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for package-lock.json
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for package.json
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for replit.nix
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for services/claude_service.py
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for services/dependency_service.py
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for services/github_service.py
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for static/images/favicon.svg
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for static/js/main.js
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for templates/base.html
+2024-11-21 18:05:28,473 - services.code_structure_service - INFO - Analyzing code structure for templates/review.html
+2024-11-21 18:05:28,473 - services.claude_service - INFO - Building analysis prompt
+2024-11-21 18:05:28,473 - services.claude_service - INFO - Sending request to Claude API
+2024-11-21 18:05:42,577 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2024-11-21 18:05:42,581 - services.claude_service - INFO - Successfully received response from Claude API
+2024-11-21 18:05:42,582 - services.claude_service - INFO - Successfully parsed Claude response

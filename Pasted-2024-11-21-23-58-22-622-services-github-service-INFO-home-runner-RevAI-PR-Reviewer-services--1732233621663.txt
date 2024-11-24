@@ -1,0 +1,108 @@
+2024-11-21 23:58:22,622 - services.github_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/github_service.py:37] - Authenticated as GitHub user: alpsla
+2024-11-21 23:58:22,648 - services.claude_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/claude_service.py:39] - Claude API client initialized successfully
+2024-11-21 23:58:26,109 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: .replit
+2024-11-21 23:58:26,109 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: Pasted-import-React-useState-from-react-import-ChevronLeft-ExternalLink-Copy-Check-1731986573138.txt
+2024-11-21 23:58:26,109 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:93] - Analyzing code structure for app.py
+2024-11-21 23:58:26,109 - services.code_structure_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:158] - Syntax error in app.py: unmatched ')' (<unknown>, line 2)
+2024-11-21 23:58:26,109 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: package-lock.json
+2024-11-21 23:58:26,109 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: package.json
+2024-11-21 23:58:26,109 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: replit.nix
+2024-11-21 23:58:26,109 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:93] - Analyzing code structure for services/claude_service.py
+2024-11-21 23:58:26,109 - services.code_structure_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:158] - Syntax error in services/claude_service.py: unmatched ')' (<unknown>, line 2)
+2024-11-21 23:58:26,109 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:93] - Analyzing code structure for services/dependency_service.py
+2024-11-21 23:58:26,110 - services.code_structure_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:158] - Syntax error in services/dependency_service.py: invalid syntax (<unknown>, line 1)
+2024-11-21 23:58:26,110 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:93] - Analyzing code structure for services/github_service.py
+2024-11-21 23:58:26,110 - services.code_structure_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:158] - Syntax error in services/github_service.py: unmatched '}' (<unknown>, line 127)
+2024-11-21 23:58:26,110 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: static/images/favicon.svg
+2024-11-21 23:58:26,110 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:93] - Analyzing code structure for static/js/main.js
+2024-11-21 23:58:26,110 - services.code_structure_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:158] - Syntax error in static/js/main.js: closing parenthesis ')' does not match opening parenthesis '{' on line 72 (<unknown>, line 75)
+2024-11-21 23:58:26,110 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: templates/base.html
+2024-11-21 23:58:26,110 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: templates/review.html
+2024-11-21 23:58:26,110 - services.claude_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/claude_service.py:56] - Running language detection
+2024-11-21 23:58:26,110 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:211] - Language Determination: Starting content-based analysis for 13 files
+2024-11-21 23:58:26,110 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: .replit
+2024-11-21 23:58:26,110 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: Pasted-import-React-useState-from-react-import-ChevronLeft-ExternalLink-Copy-Check-1731986573138.txt
+2024-11-21 23:58:26,110 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:224] - Language Determination: Skipping non-code file: Pasted-import-React-useState-from-react-import-ChevronLeft-ExternalLink-Copy-Check-1731986573138.txt
+2024-11-21 23:58:26,110 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: app.py
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:251] - Language Determination: Python detected with 0.90 confidence for file app.py
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: package-lock.json
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:224] - Language Determination: Skipping non-code file: package-lock.json
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: package.json
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:224] - Language Determination: Skipping non-code file: package.json
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: replit.nix
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:224] - Language Determination: Skipping non-code file: replit.nix
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: services/claude_service.py
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:251] - Language Determination: Python detected with 0.90 confidence for file services/claude_service.py
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: services/dependency_service.py
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:251] - Language Determination: Python detected with 0.90 confidence for file services/dependency_service.py
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: services/github_service.py
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:251] - Language Determination: Python detected with 0.90 confidence for file services/github_service.py
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: static/images/favicon.svg
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:224] - Language Determination: Skipping non-code file: static/images/favicon.svg
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: static/js/main.js
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:251] - Language Determination: JavaScript detected with 0.90 confidence for file static/js/main.js
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: templates/base.html
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:224] - Language Determination: Skipping non-code file: templates/base.html
+2024-11-21 23:58:26,111 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:219] - Language Determination: Processing file: templates/review.html
+2024-11-21 23:58:26,112 - services.language_detection_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/language_detection_service.py:224] - Language Determination: Skipping non-code file: templates/review.html
+2024-11-21 23:58:26,112 - services.claude_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/claude_service.py:60] - Language Determination: Primary language detected: Python
+2024-11-21 23:58:26,112 - services.claude_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/claude_service.py:65] - Running dependency analysis
+2024-11-21 23:58:26,112 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:23] - Code Structure Analysis: Starting dependency analysis
+2024-11-21 23:58:26,112 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:25] - Code Structure Analysis: Found 13 files to analyze
+2024-11-21 23:58:26,112 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:29] - Code Structure Analysis: Created temporary directory for analysis
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 1/13 (7.7%): .replit
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 2/13 (15.4%): Pasted-import-React-useState-from-react-import-ChevronLeft-ExternalLink-Copy-Check-1731986573138.txt
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 3/13 (23.1%): app.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:124] - Processing Python file: app.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:130] - Processing file for analysis: app.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 4/13 (30.8%): package-lock.json
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 5/13 (38.5%): package.json
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 6/13 (46.2%): replit.nix
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 7/13 (53.8%): services/claude_service.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:124] - Processing Python file: services/claude_service.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:130] - Processing file for analysis: services/claude_service.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 8/13 (61.5%): services/dependency_service.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:124] - Processing Python file: services/dependency_service.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:130] - Processing file for analysis: services/dependency_service.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 9/13 (69.2%): services/github_service.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:124] - Processing Python file: services/github_service.py
+2024-11-21 23:58:26,113 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:130] - Processing file for analysis: services/github_service.py
+2024-11-21 23:58:26,114 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 10/13 (76.9%): static/images/favicon.svg
+2024-11-21 23:58:26,114 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 11/13 (84.6%): static/js/main.js
+2024-11-21 23:58:26,114 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:124] - Processing JavaScript file: static/js/main.js
+2024-11-21 23:58:26,114 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:130] - Processing file for analysis: static/js/main.js
+2024-11-21 23:58:26,114 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 12/13 (92.3%): templates/base.html
+2024-11-21 23:58:26,114 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:42] - Code Structure Analysis: Processing file 13/13 (100.0%): templates/review.html
+2024-11-21 23:58:26,114 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:49] - Code Structure Analysis: Running dependency-cruiser analysis
+2024-11-21 23:58:26,114 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:142] - Configuring dependency-cruiser analysis
+2024-11-21 23:58:26,114 - services.dependency_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:215] - Failed to run dependency-cruiser: name 'null' is not defined
+2024-11-21 23:58:26,114 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:52] - Code Structure Analysis: Running madge analysis
+2024-11-21 23:58:27,050 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:56] - Code Structure Analysis: Processing analysis results
+2024-11-21 23:58:27,050 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:59] - Code Structure Analysis: Analysis completed successfully
+2024-11-21 23:58:27,051 - services.dependency_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/dependency_service.py:77] - Code Structure Analysis: Cleaned up temporary directory
+2024-11-21 23:58:27,051 - services.claude_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/claude_service.py:69] - Running code structure analysis
+2024-11-21 23:58:27,051 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: .replit
+2024-11-21 23:58:27,051 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: Pasted-import-React-useState-from-react-import-ChevronLeft-ExternalLink-Copy-Check-1731986573138.txt
+2024-11-21 23:58:27,051 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:93] - Analyzing code structure for app.py
+2024-11-21 23:58:27,051 - services.code_structure_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:158] - Syntax error in app.py: unmatched ')' (<unknown>, line 2)
+2024-11-21 23:58:27,051 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: package-lock.json
+2024-11-21 23:58:27,051 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: package.json
+2024-11-21 23:58:27,051 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: replit.nix
+2024-11-21 23:58:27,051 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:93] - Analyzing code structure for services/claude_service.py
+2024-11-21 23:58:27,051 - services.code_structure_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:158] - Syntax error in services/claude_service.py: unmatched ')' (<unknown>, line 2)
+2024-11-21 23:58:27,051 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:93] - Analyzing code structure for services/dependency_service.py
+2024-11-21 23:58:27,051 - services.code_structure_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:158] - Syntax error in services/dependency_service.py: invalid syntax (<unknown>, line 1)
+2024-11-21 23:58:27,051 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:93] - Analyzing code structure for services/github_service.py
+2024-11-21 23:58:27,052 - services.code_structure_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:158] - Syntax error in services/github_service.py: unmatched '}' (<unknown>, line 127)
+2024-11-21 23:58:27,052 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: static/images/favicon.svg
+2024-11-21 23:58:27,052 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:93] - Analyzing code structure for static/js/main.js
+2024-11-21 23:58:27,052 - services.code_structure_service - ERROR - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:158] - Syntax error in static/js/main.js: closing parenthesis ')' does not match opening parenthesis '{' on line 72 (<unknown>, line 75)
+2024-11-21 23:58:27,052 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: templates/base.html
+2024-11-21 23:58:27,052 - services.code_structure_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/code_structure_service.py:79] - Skipping unsupported file type: templates/review.html
+2024-11-21 23:58:27,052 - services.claude_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/claude_service.py:86] - Building analysis prompt
+2024-11-21 23:58:27,052 - services.claude_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/claude_service.py:89] - Sending request to Claude API
+2024-11-21 23:58:43,597 - httpx - INFO - [/home/runner/RevAI-PR-Reviewer/.pythonlibs/lib/python3.11/site-packages/httpx/_client.py:1038] - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2024-11-21 23:58:43,600 - services.claude_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/claude_service.py:101] - Successfully received response from Claude API
+2024-11-21 23:58:43,600 - services.claude_service - INFO - [/home/runner/RevAI-PR-Reviewer/services/claude_service.py:407] - Successfully parsed Claude response
+INFO:     172.31.196.14:59362 - "POST /review HTTP/1.1" 200 OK
+INFO:     172.31.196.14:59362 - "GET /static/js/main.js HTTP/1.1" 304 Not Modified

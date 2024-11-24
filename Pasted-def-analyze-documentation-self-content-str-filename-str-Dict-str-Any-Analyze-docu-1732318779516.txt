@@ -1,0 +1,118 @@
+def _analyze_documentation(self, content: str, filename: str) -> Dict[str, Any]:
+    """Analyze documentation quality and coverage with support for multiple doc styles."""
+    try:
+        # Initialize documentation parser if not already done
+        if not hasattr(self, 'doc_parser'):
+            from plugins.documentation_parser import DocumentationParser
+            self.doc_parser = DocumentationParser()
+            self.doc_parser.initialize()
+
+        # Execute documentation analysis
+        doc_analysis = self.doc_parser.execute_sync({
+            'files': [{
+                'filename': filename,
+                'content': content
+            }]
+        })
+        
+        # Extract documentation info for this specific file
+        doc_info = doc_analysis.get('documentation', {}).get(filename, {})
+        if not doc_info:
+            return self._empty_doc_info('No documentation found')
+            
+        return doc_info
+            
+    except Exception as e:
+        logger.error(f"Documentation analysis failed: {str(e)}")
+        return self._empty_doc_info(str(e))
+
+def _empty_doc_info(self, error_message: str = None) -> Dict[str, Any]:
+    """Create an empty documentation info structure."""
+    return {
+        'module_doc': None,
+        'classes': {},
+        'functions': {},
+        'coverage': 0.0,
+        'quality_score': 0.0,
+        'error': error_message
+    }
+
+def _calculate_doc_quality(self, docstring: Optional[str]) -> float:
+    """Calculate quality score for a single docstring."""
+    if not docstring:
+        return 0.0
+        
+    score = 0.0
+    max_score = 100.0
+    
+    # Check for sections
+    sections = {
+        'args': 5.0,
+        'returns': 5.0,
+        'raises': 5.0,
+        'example': 10.0,
+        'note': 5.0,
+        'warning': 5.0
+    }
+    
+    for section, points in sections.items():
+        if f":{section}:" in docstring.lower():
+            score += points
+            
+    # Check length and content
+    words = docstring.split()
+    if len(words) >= 10:  # Basic description
+        score += 20.0
+    if len(words) >= 30:  # Detailed description
+        score += 10.0
+        
+    # Check for code examples
+    if ">>>" in docstring or "```" in docstring:
+        score += 15.0
+        
+    # Check for parameter descriptions
+    if ":param" in docstring or "@param" in docstring:
+        score += 15.0
+        
+    # Check for return type documentation
+    if ":return:" in docstring or "@return" in docstring:
+        score += 10.0
+        
+    return min(score, max_score)
+
+def _calculate_overall_doc_quality(self, doc_info: Dict) -> float:
+    """Calculate overall documentation quality score."""
+    if not doc_info.get('docstrings'):
+        return 0.0
+        
+    total_score = sum(doc['quality_score'] for doc in doc_info['docstrings'])
+    return total_score / len(doc_info['docstrings'])
+
+def _calculate_doc_coverage(self, result: AnalysisResult) -> float:
+    """Calculate documentation coverage percentage."""
+    if not result.documentation_metrics:
+        return 0.0
+        
+    doc_info = result.documentation_metrics
+    total_elements = 1  # Start with module
+    documented_elements = 1 if doc_info.get('module_doc') else 0
+    
+    # Count classes and their methods
+    for class_info in doc_info.get('classes', {}).values():
+        total_elements += 1
+        if class_info.get('docstring'):
+            documented_elements += 1
+            
+        # Count methods
+        for method_info in class_info.get('methods', {}).values():
+            total_elements += 1
+            if method_info.get('docstring'):
+                documented_elements += 1
+                
+    # Count standalone functions
+    for func_info in doc_info.get('functions', {}).values():
+        total_elements += 1
+        if func_info.get('docstring'):
+            documented_elements += 1
+            
+    return (documented_elements / total_elements * 100) if total_elements > 0 else 0.0

@@ -1,0 +1,268 @@
+# services/code_analysis/base.py
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Any, Union
+from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class LanguageConfig:
+    """Configuration for language-specific analysis."""
+    name: str
+    extensions: List[str]
+    is_compiled: bool = False
+    doc_style: str = "google"  # google, numpy, sphinx, jsdoc
+    max_line_length: int = 80
+    complexity_threshold: int = 10
+    parser_config: Dict = field(default_factory=lambda: {
+        'analyze_imports': True,
+        'analyze_complexity': True,
+        'analyze_documentation': True,
+        'require_docstrings': True,
+        'min_doc_length': 10,
+        'check_params': True,
+        'check_returns': True,
+        'check_examples': True
+    })
+
+@dataclass
+class AnalysisResult:
+    """Result of code structure analysis"""
+    structures: List[Dict]
+    imports: List[str]
+    total_complexity: 'ComplexityMetrics'
+    security_metrics: Optional['SecurityMetrics'] = None
+    performance_metrics: Optional['PerformanceMetrics'] = None
+    documentation_metrics: Optional[Dict[str, Any]] = None
+
+class CodeAnalyzerBase:
+    """Base class for code analyzers"""
+    def analyze_code(self, content: str, filename: str) -> AnalysisResult:
+        raise NotImplementedError
+
+    def _empty_result(self) -> AnalysisResult:
+        from .metrics.complexity import ComplexityMetrics
+        return AnalysisResult(
+            structures=[],
+            imports=[],
+            total_complexity=ComplexityMetrics()
+        )
+
+# services/code_analysis/metrics/complexity.py
+from dataclasses import dataclass
+import math
+
+@dataclass
+class ComplexityMetrics:
+    """Complexity metrics for code analysis"""
+    cyclomatic_complexity: int = 0
+    cognitive_complexity: int = 0
+    nesting_depth: int = 0
+    maintainability_index: float = 100.0
+
+    def update(self, other: 'ComplexityMetrics') -> None:
+        self.cyclomatic_complexity += other.cyclomatic_complexity
+        self.cognitive_complexity += other.cognitive_complexity
+        self.nesting_depth = max(self.nesting_depth, other.nesting_depth)
+        self.maintainability_index = (self.maintainability_index + other.maintainability_index) / 2
+
+# services/code_analysis/metrics/security.py
+from dataclasses import dataclass, field
+from typing import List, Dict
+
+@dataclass
+class SecurityMetrics:
+    """Security-related metrics"""
+    vulnerabilities: List[Dict] = field(default_factory=list)
+    unsafe_patterns: List[Dict] = field(default_factory=list)
+    security_score: float = 100.0
+    authentication_checks: bool = False
+    input_validation: bool = False
+    data_encryption: bool = False
+
+# services/code_analysis/metrics/performance.py
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+@dataclass
+class PerformanceMetrics:
+    """Performance-related metrics"""
+    memory_usage: Optional[float] = None
+    time_complexity: str = "O(1)"
+    space_complexity: str = "O(1)"
+    async_operations: bool = False
+    caching_used: bool = False
+    resource_leaks: List[str] = field(default_factory=list)
+
+# services/code_analysis/utils/caching.py
+import hashlib
+from datetime import datetime
+from typing import Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
+
+class AnalysisCache:
+    def __init__(self):
+        self.cache: Dict[str, Dict] = {}
+
+    def get_cache_key(self, content: str, filename: str) -> str:
+        content_hash = hashlib.md5(content.encode()).hexdigest()
+        return f"{filename}:{content_hash}"
+
+    def get(self, key: str, max_age_seconds: int = 3600) -> Optional[Any]:
+        if key not in self.cache:
+            return None
+            
+        cached = self.cache[key]
+        if (datetime.utcnow() - cached['timestamp']).total_seconds() > max_age_seconds:
+            return None
+            
+        return cached['result']
+
+    def store(self, key: str, result: Any) -> None:
+        self.cache[key] = {
+            'result': result,
+            'timestamp': datetime.utcnow()
+        }
+
+# services/code_analysis/analyzers/python_analyzer.py
+import ast
+from typing import Dict, List, Union
+import logging
+from ..base import CodeAnalyzerBase, AnalysisResult
+from ..metrics.complexity import ComplexityMetrics
+
+logger = logging.getLogger(__name__)
+
+class PythonAnalyzer(CodeAnalyzerBase):
+    def analyze_code(self, content: str, filename: str, metrics: Dict) -> AnalysisResult:
+        try:
+            tree = ast.parse(content)
+            structures = []
+            imports = []
+            total_complexity = ComplexityMetrics()
+
+            # Analyze each node
+            for node in ast.walk(tree):
+                try:
+                    if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
+                        complexity = self._calculate_complexity(node)
+                        total_complexity.update(complexity)
+
+                        if isinstance(node, ast.ClassDef):
+                            structures.append({
+                                'type': 'class',
+                                'name': node.name,
+                                'complexity': complexity,
+                                'methods': self._analyze_method_complexity(node),
+                                'inheritance': self._analyze_inheritance(node),
+                                'api_stability': self._check_api_stability(node)
+                            })
+                        else:
+                            structures.append({
+                                'type': 'function',
+                                'name': node.name,
+                                'complexity': complexity,
+                                'code_smells': self._detect_code_smells(node),
+                                'api_stability': self._check_api_stability(node)
+                            })
+                    elif isinstance(node, (ast.Import, ast.ImportFrom)):
+                        imports.extend(self._extract_imports(node))
+
+                except Exception as e:
+                    logger.error(f"Error analyzing node in {filename}: {str(e)}")
+                    continue
+
+            return AnalysisResult(
+                structures=structures,
+                imports=imports,
+                total_complexity=total_complexity
+            )
+
+        except Exception as e:
+            logger.error(f"Error in Python analysis for {filename}: {str(e)}")
+            return self._empty_result()
+
+    # Add other Python-specific analysis methods here...
+
+# services/code_analysis/analyzers/javascript_analyzer.py
+import re
+from typing import Dict, List
+import logging
+from ..base import CodeAnalyzerBase, AnalysisResult
+from ..metrics.complexity import ComplexityMetrics
+
+logger = logging.getLogger(__name__)
+
+class JavaScriptAnalyzer(CodeAnalyzerBase):
+    def analyze_code(self, content: str, filename: str, metrics: Dict) -> AnalysisResult:
+        try:
+            # Basic structure analysis
+            structures = []
+            imports = []
+
+            # Parse imports using regex
+            import_patterns = [
+                r'import\s+.*\s+from\s+[\'"]([^\'"]+)[\'"]',
+                r'require\([\'"]([^\'"]+)[\'"]\)',
+                r'import\([\'"]([^\'"]+)[\'"]\)'
+            ]
+
+            for pattern in import_patterns:
+                imports.extend(re.findall(pattern, content))
+
+            # Calculate complexity metrics
+            total_complexity = ComplexityMetrics(
+                cyclomatic_complexity=metrics.get('CCN', 0),
+                cognitive_complexity=len(re.findall(r'\b(if|while|for|switch)\b', content)),
+                nesting_depth=self._calculate_nesting_depth(content),
+                maintainability_index=100.0
+            )
+
+            return AnalysisResult(
+                structures=structures,
+                imports=list(set(imports)),
+                total_complexity=total_complexity
+            )
+
+        except Exception as e:
+            logger.error(f"Error analyzing JavaScript file {filename}: {str(e)}")
+            return self._empty_result()
+
+    # Add other JavaScript-specific analysis methods here...
+
+# services/code_analysis/analyzers/documentation_analyzer.py
+from typing import Dict, Any, Optional
+import logging
+from ..base import CodeAnalyzerBase
+
+logger = logging.getLogger(__name__)
+
+class DocumentationAnalyzer(CodeAnalyzerBase):
+    def analyze_documentation(self, content: str, filename: str) -> Dict[str, Any]:
+        try:
+            if not hasattr(self, 'doc_parser'):
+                from plugins.documentation_parser import DocumentationParser
+                self.doc_parser = DocumentationParser()
+                self.doc_parser.initialize()
+
+            doc_analysis = self.doc_parser.execute_sync({
+                'files': [{
+                    'filename': filename,
+                    'content': content
+                }]
+            })
+            
+            doc_info = doc_analysis.get('documentation', {}).get(filename, {})
+            if not doc_info:
+                return self._empty_doc_info('No documentation found')
+            
+            return doc_info
+            
+        except Exception as e:
+            logger.error(f"Documentation analysis failed: {str(e)}")
+            return self._empty_doc_info(str(e))
+
+    # Add other documentation analysis methods here...

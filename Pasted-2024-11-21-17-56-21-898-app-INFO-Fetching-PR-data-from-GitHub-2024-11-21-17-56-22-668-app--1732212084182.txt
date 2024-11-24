@@ -1,0 +1,33 @@
+2024-11-21 17:56:21,898 - app - INFO - Fetching PR data from GitHub
+2024-11-21 17:56:22,668 - app - INFO - Analyzing PR with Claude
+2024-11-21 17:56:25,298 - services.claude_service - INFO - Running dependency analysis
+2024-11-21 17:56:27,092 - services.dependency_service - ERROR - dependency-cruiser failed: 
+  WARNING: You're running a globally installed dependency-cruiser.
+
+           We recommend to install and run it as a local devDependency in
+           your project instead. There it has your project's environment and
+           transpilers at its disposal. That will ensure it can find e.g.
+           TypeScript, Vue or Svelte modules and dependencies.
+
+
+  ERROR: /tmp/tmprkq25j4a/package.json (directory description file): SyntaxError: Unexpected token '@', "@@ -0,0 +1"... is not valid JSON
+npm notice
+npm notice New minor version of npm available! 10.8.1 -> 10.9.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v10.9.0
+npm notice To update run: npm install -g npm@10.9.0
+npm notice
+
+2024-11-21 17:56:28,886 - services.claude_service - INFO - Running code structure analysis
+2024-11-21 17:56:28,886 - services.code_structure_service - INFO - Analyzing code structure for .replit
+2024-11-21 17:56:28,886 - services.code_structure_service - INFO - Analyzing code structure for Pasted-import-React-useState-from-react-import-ChevronLeft-ExternalLink-Copy-Check-1731986573138.txt
+2024-11-21 17:56:28,886 - services.code_structure_service - INFO - Analyzing code structure for app.py
+2024-11-21 17:56:28,886 - services.code_structure_service - INFO - Analyzing code structure for package-lock.json
+2024-11-21 17:56:28,886 - services.code_structure_service - INFO - Analyzing code structure for package.json
+2024-11-21 17:56:28,886 - services.code_structure_service - INFO - Analyzing code structure for replit.nix
+2024-11-21 17:56:28,886 - services.code_structure_service - INFO - Analyzing code structure for services/claude_service.py
+2024-11-21 17:56:28,887 - services.code_structure_service - INFO - Analyzing code structure for services/dependency_service.py
+2024-11-21 17:56:28,887 - services.code_structure_service - INFO - Analyzing code structure for services/github_service.py
+2024-11-21 17:56:28,887 - services.code_structure_service - INFO - Analyzing code structure for static/images/favicon.svg
+2024-11-21 17:56:28,887 - services.code_structure_service - INFO - Analyzing code structure for static/js/main.js
+2024-11-21 17:56:28,887 - services.code_structure_service - INFO - Analyzing code structure for templates/base.html
+2024-11-21 17:56:28,887 - services.code_structure_service - INFO - Analyzing code structure for templates/review.html

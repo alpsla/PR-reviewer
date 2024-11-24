@@ -1,0 +1,229 @@
+/**
+ * @typedef {Object} ThemeConfig
+ * @property {string} theme - The current theme ('light' or 'dark')
+ * @property {Object} icons - Theme-specific icons
+ * @property {string} icons.light - Icon class for light theme
+ * @property {string} icons.dark - Icon class for dark theme
+ */
+
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        initializeForm();
+        initializeTooltips();
+        initializeTheme();
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showAlert('Failed to initialize application', 'error');
+    }
+});
+
+/**
+ * Initialize form handling with enhanced error checking
+ */
+function initializeForm() {
+    const prForm = document.getElementById('prForm');
+    if (!prForm) {
+        console.debug('No PR form found on current page');
+        return;
+    }
+    
+    const submitBtn = prForm.querySelector('button[type="submit"]');
+    const spinner = submitBtn?.querySelector('.spinner-border');
+    const buttonText = submitBtn?.querySelector('.button-text');
+    
+    if (!submitBtn || !spinner || !buttonText) {
+        console.error('Required form elements not found');
+        return;
+    }
+    
+    prForm.addEventListener('submit', function(e) {
+        submitBtn.disabled = true;
+        spinner.classList.remove('d-none');
+        buttonText.textContent = 'Analyzing...';
+        
+        // Validate form data
+        const prUrl = new FormData(prForm).get('pr_url');
+        if (!prUrl) {
+            e.preventDefault();
+            showAlert('Please provide a PR URL', 'error');
+            resetSubmitButton(submitBtn, spinner, buttonText);
+            return;
+        }
+        
+        // Validate URL format
+        try {
+            const url = new URL(prUrl);
+            if (!url.hostname.includes('github.com')) {
+                e.preventDefault();
+                showAlert('Please provide a valid GitHub PR URL', 'error');
+                resetSubmitButton(submitBtn, spinner, buttonText);
+            }
+        } catch (error) {
+            e.preventDefault();
+            showAlert('Invalid URL format', 'error');
+            resetSubmitButton(submitBtn, spinner, buttonText);
+        }
+    });
+}
+
+/**
+ * Reset submit button to initial state
+ */
+function resetSubmitButton(submitBtn, spinner, buttonText) {
+    submitBtn.disabled = false;
+    spinner.classList.add('d-none');
+    buttonText.textContent = 'Analyze PR';
+}
+
+/**
+ * Initialize Bootstrap tooltips with error handling
+ */
+function initializeTooltips() {
+    try {
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        if (tooltipTriggerList.length > 0) {
+            tooltipTriggerList.forEach(tooltipTriggerEl => {
+                if (tooltipTriggerEl) {
+                    new bootstrap.Tooltip(tooltipTriggerEl);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Failed to initialize tooltips:', error);
+    }
+}
+
+/**
+ * Initialize theme with error handling and type checking
+ */
+function initializeTheme() {
+    try {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        const html = document.documentElement;
+        const body = document.body;
+        const themeIcon = document.querySelector('#themeToggle i');
+        
+        if (!html || !body) {
+            throw new Error('Required DOM elements not found');
+        }
+
+        const themeConfig = {
+            theme: savedTheme,
+            icons: {
+                light: 'bi-moon-fill',
+                dark: 'bi-sun-fill'
+            }
+        };
+        
+        applyTheme(themeConfig, html, body, themeIcon);
+        
+    } catch (error) {
+        console.error('Theme initialization failed:', error);
+        showAlert('Failed to initialize theme', 'error');
+    }
+}
+
+/**
+ * Apply theme configuration
+ * @param {ThemeConfig} config - Theme configuration object
+ * @param {HTMLElement} html - HTML root element
+ * @param {HTMLElement} body - Body element
+ * @param {HTMLElement} themeIcon - Theme toggle icon element
+ */
+function applyTheme(config, html, body, themeIcon) {
+    html.setAttribute('data-bs-theme', config.theme);
+    
+    const isDark = config.theme === 'dark';
+    body.classList.toggle('bg-dark', isDark);
+    body.classList.toggle('bg-light', !isDark);
+    
+    if (themeIcon) {
+        themeIcon.classList.remove(config.icons.light, config.icons.dark);
+        themeIcon.classList.add(isDark ? config.icons.dark : config.icons.light);
+    }
+}
+
+/**
+ * Toggle theme with enhanced error handling
+ */
+function toggleTheme() {
+    try {
+        const html = document.documentElement;
+        const body = document.body;
+        const themeIcon = document.querySelector('#themeToggle i');
+        
+        if (!html || !body) {
+            throw new Error('Required DOM elements not found');
+        }
+
+        const currentTheme = html.getAttribute('data-bs-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        const themeConfig = {
+            theme: newTheme,
+            icons: {
+                light: 'bi-moon-fill',
+                dark: 'bi-sun-fill'
+            }
+        };
+        
+        applyTheme(themeConfig, html, body, themeIcon);
+        
+        try {
+            localStorage.setItem('theme', newTheme);
+        } catch (storageError) {
+            console.warn('Failed to save theme preference:', storageError);
+        }
+        
+    } catch (error) {
+        console.error('Theme toggle failed:', error);
+        showAlert('Failed to toggle theme', 'error');
+    }
+}
+
+/**
+ * Show alert with improved styling and error handling
+ * @param {string} message - Alert message
+ * @param {string} type - Alert type ('success', 'error', 'info')
+ */
+function showAlert(message, type = 'info') {
+    try {
+        const alertDiv = document.createElement('div');
+        const iconClass = {
+            error: 'bi-exclamation-triangle-fill',
+            success: 'bi-check-circle-fill',
+            info: 'bi-info-circle-fill'
+        }[type] || 'bi-info-circle-fill';
+        
+        alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+        alertDiv.style.zIndex = '1050';
+        alertDiv.innerHTML = `
+            <i class="bi ${iconClass} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            alertDiv.classList.remove('show');
+            setTimeout(() => alertDiv.remove(), 150);
+        }, 5000);
+        
+    } catch (error) {
+        console.error('Failed to show alert:', error);
+    }
+}
+
+// Export functions for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        initializeForm,
+        initializeTooltips,
+        initializeTheme,
+        toggleTheme,
+        showAlert
+    };
+}
