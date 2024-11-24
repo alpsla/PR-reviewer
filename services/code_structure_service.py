@@ -438,17 +438,25 @@ class CodeStructureService:
             result.performance_metrics = file_analyzer._analyze_performance(
                 content, language_config)
 
-            # Add documentation metrics
-            doc_metrics = self._analyze_documentation(content, filename)
-            if doc_metrics:
-                result.documentation_metrics = {
-                    'module_doc': doc_metrics.module_doc,
-                    'classes': doc_metrics.classes,
-                    'functions': doc_metrics.functions,
-                    'coverage': doc_metrics.coverage,
-                    'quality_score': doc_metrics.quality_score,
-                    'error': doc_metrics.error
-                }
+            # Add documentation metrics with enhanced error handling
+            try:
+                doc_metrics = self._analyze_documentation(content, filename)
+                if doc_metrics:
+                    result.documentation_metrics = {
+                        'module_doc': doc_metrics.module_doc,
+                        'classes': doc_metrics.classes,
+                        'functions': doc_metrics.functions,
+                        'coverage': doc_metrics.coverage,
+                        'quality_score': doc_metrics.quality_score,
+                        'error': doc_metrics.error
+                    }
+                    logger.info(f"Documentation analysis completed for {filename}")
+                else:
+                    logger.warning(f"No documentation metrics available for {filename}")
+                    result.documentation_metrics = None
+            except Exception as e:
+                logger.error(f"Documentation analysis failed for {filename}: {str(e)}")
+                result.documentation_metrics = None
             
             # Cache and return result
             self._store_result(cache_key, result)

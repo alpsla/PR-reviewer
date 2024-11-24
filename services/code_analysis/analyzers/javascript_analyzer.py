@@ -1,11 +1,21 @@
 from typing import Dict, List, Any
 import re
 import logging
-from ..base import CodeAnalyzerBase, AnalysisResult
+from ..base import CodeAnalyzerBase
 from ..metrics.complexity import ComplexityMetrics
 from .documentation_analyzer import DocumentationAnalyzer
 
 logger = logging.getLogger(__name__)
+
+# Define AnalysisResult locally
+class AnalysisResult:
+    """Result of code structure analysis"""
+    def __init__(self, structures: List[Dict], imports: List[str], total_complexity: ComplexityMetrics,
+                 documentation_metrics: Dict[str, Any] = None):
+        self.structures = structures
+        self.imports = imports
+        self.total_complexity = total_complexity
+        self.documentation_metrics = documentation_metrics
 
 class JavaScriptAnalyzer(CodeAnalyzerBase):
     """Analyzer for JavaScript/TypeScript code with documentation support."""
@@ -66,6 +76,14 @@ class JavaScriptAnalyzer(CodeAnalyzerBase):
         """Calculate maximum nesting depth in JavaScript code."""
         max_depth = 0
         current_depth = 0
+    def _empty_result(self) -> AnalysisResult:
+        """Return empty analysis result."""
+        return AnalysisResult(
+            structures=[],
+            imports=[],
+            total_complexity=ComplexityMetrics(),
+            documentation_metrics=None
+        )
         
         for char in content:
             if char == '{':
