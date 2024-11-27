@@ -1,0 +1,62 @@
+[
+  {
+    "filename": "packages/next/src/build/handle-externals.ts",
+    "type_system": {
+      "interfaces_found": 0,
+      "types_found": 0,
+      "type_aliases": 0,
+      "generic_types": 4,
+      "type_coverage": 18.181818181818183,
+      "interface_details": {}
+    },
+    "documentation": {
+      "jsdoc_coverage": 100.0,
+      "type_doc_coverage": 0.0,
+      "interface_doc_coverage": 100,
+      "well_documented": [
+        "replace"
+      ],
+      "needs_documentation": []
+    },
+    "patterns": {
+      "modern_features": {
+        "template_literal_types": false,
+        "optional_chaining": true,
+        "nullish_coalescing": false,
+        "type_guards": true
+      },
+      "best_practices": {
+        "proper_type_exports": true,
+        "consistent_interface_naming": false,
+        "type_guard_usage": false,
+        "any_types_found": true
+      },
+      "framework_patterns": {
+        "react": {
+          "event_typing": false,
+          "prop_types": false,
+          "hook_types": false,
+          "context_typing": false
+        },
+        "testing": {
+          "jest_types": true,
+          "async_typing": true
+        }
+      }
+    },
+    "recommendations": {
+      "type_improvements": [
+        "Replace 'any' types with specific types",
+        "Add missing parameter types in callbacks",
+        "Consider using readonly arrays"
+      ],
+      "doc_improvements": [
+        "Include usage examples"
+      ],
+      "pattern_suggestions": [
+        "Consider using const assertions",
+        "Add explicit return types"
+      ]
+    }
+  }
+]

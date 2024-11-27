@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- PR Info Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Pull Request Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Title:</strong> {{ pr_info.title }}</p>
+                    <p><strong>Author:</strong> {{ pr_info.author }}</p>
+                    <p><strong>Repository:</strong> {{ pr_info.repo }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Created:</strong> {{ pr_info.created_at }}</p>
+                    <p><strong>Status:</strong> <span class="badge bg-{{ 'success' if pr_info.state == 'open' else 'secondary' }}">{{ pr_info.state }}</span></p>
+                    <p><strong>Files Changed:</strong> {{ pr_info.changed_files }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Overview -->
+    <div class="row mb-4">
+        <!-- Code Health Score -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Code Health Score</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="health-score-circle" data-score="{{ analysis_results.overall_health }}">
+                            <span class="score-text">{{ "%.1f"|format(analysis_results.overall_health) }}</span>
+                        </div>
+                    </div>
+                    <div class="progress-metrics">
+                        <div class="metric-item">
+                            <label>Type Safety:</label>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ analysis_results.type_safety }}%" 
+                                     aria-valuenow="{{ analysis_results.type_safety }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ "%.1f"|format(analysis_results.type_safety) }}%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <label>Documentation:</label>
+                            <div class="progress">
+                                <div class="progress-bar bg-info" role="progressbar" style="width: {{ analysis_results.documentation }}%" 
+                                     aria-valuenow="{{ analysis_results.documentation }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ "%.1f"|format(analysis_results.documentation) }}%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <label>Code Quality:</label>
+                            <div class="progress">
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ analysis_results.code_quality }}%" 
+                                     aria-valuenow="{{ analysis_results.code_quality }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ "%.1f"|format(analysis_results.code_quality) }}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code Metrics -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Code Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="metricsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Analysis -->
+    <div class="row mb-4">
+        <!-- Type Safety Analysis -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Type Safety Analysis</h5>
+                    <span class="badge bg-light text-dark">Score: {{ "%.1f"|format(analysis_results.type_safety) }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="type-safety-details">
+                        {% for issue in analysis_results.type_issues %}
+                        <div class="issue-item">
+                            <h6>{{ issue.title }}</h6>
+                            <pre><code class="language-typescript">{{ issue.code }}</code></pre>
+                            <p class="text-muted">{{ issue.description }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documentation Analysis -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Documentation Analysis</h5>
+                    <span class="badge bg-light text-dark">Score: {{ "%.1f"|format(analysis_results.documentation) }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="documentation-details">
+                        {% for item in analysis_results.documentation_issues %}
+                        <div class="doc-item">
+                            <h6>{{ item.title }}</h6>
+                            <pre><code class="language-typescript">{{ item.code }}</code></pre>
+                            <p class="text-muted">{{ item.description }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Quality Analysis -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Code Quality Analysis</h5>
+            <span class="badge bg-light text-dark">Score: {{ "%.1f"|format(analysis_results.code_quality) }}</span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="complexityChart"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <div class="quality-issues">
+                        {% for issue in analysis_results.quality_issues %}
+                        <div class="issue-item">
+                            <h6>{{ issue.title }}</h6>
+                            <pre><code class="language-typescript">{{ issue.code }}</code></pre>
+                            <p class="text-muted">{{ issue.description }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dependencies Analysis -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">Dependencies Analysis</h5>
+        </div>
+        <div class="card-body">
+            <div id="dependencyGraph"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Styles -->
+<style>
+.health-score-circle {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 10px solid #28a745;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    position: relative;
+}
+
+.score-text {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #28a745;
+}
+
+.progress-metrics {
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.metric-item {
+    margin-bottom: 1rem;
+}
+
+.metric-item label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.issue-item, .doc-item {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.issue-item:last-child, .doc-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    margin: 0.5rem 0;
+}
+
+#dependencyGraph {
+    height: 400px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+</style>
+
+<!-- Load required libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.2/dist/vis-network.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-typescript.min.js"></script>
+
+<!-- Initialize charts and graphs -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Code Metrics Chart
+    const metricsCtx = document.getElementById('metricsChart').getContext('2d');
+    new Chart(metricsCtx, {
+        type: 'radar',
+        data: {
+            labels: ['Type Safety', 'Documentation', 'Code Quality', 'Complexity', 'Test Coverage'],
+            datasets: [{
+                label: 'Current PR',
+                data: [
+                    {{ analysis_results.type_safety }},
+                    {{ analysis_results.documentation }},
+                    {{ analysis_results.code_quality }},
+                    {{ analysis_results.complexity_score }},
+                    {{ analysis_results.test_coverage }}
+                ],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+
+    // Complexity Chart
+    const complexityCtx = document.getElementById('complexityChart').getContext('2d');
+    new Chart(complexityCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Cyclomatic', 'Cognitive', 'Halstead'],
+            datasets: [{
+                label: 'Complexity Metrics',
+                data: [
+                    {{ analysis_results.cyclomatic_complexity }},
+                    {{ analysis_results.cognitive_complexity }},
+                    {{ analysis_results.halstead_complexity }}
+                ],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.2)',
+                    'rgba(75, 192, 192, 0.2)',
+                    'rgba(153, 102, 255, 0.2)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Initialize dependency graph
+    const container = document.getElementById('dependencyGraph');
+    const data = {
+        nodes: {{ analysis_results.dependency_nodes|tojson|safe }},
+        edges: {{ analysis_results.dependency_edges|tojson|safe }}
+    };
+    const options = {
+        nodes: {
+            shape: 'box',
+            margin: 10,
+            font: {
+                size: 14
+            }
+        },
+        edges: {
+            arrows: 'to',
+            smooth: {
+                type: 'cubicBezier'
+            }
+        },
+        layout: {
+            hierarchical: {
+                direction: 'LR',
+                sortMethod: 'directed'
+            }
+        },
+        physics: false
+    };
+    new vis.Network(container, data, options);
+
+    // Initialize syntax highlighting
+    Prism.highlightAll();
+});
+</script>
+{% endblock %}

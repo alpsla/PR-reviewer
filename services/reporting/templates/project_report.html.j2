@@ -1,0 +1,142 @@
+{% extends "base.html.j2" %}
+
+{% block title %}Project Analysis Report{% endblock %}
+
+{% block header %}Project Analysis Report{% endblock %}
+
+{% block header_content %}
+<div class="bg-blue-100 dark:bg-blue-900 rounded-lg p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="metric-card">
+            <h3 class="text-lg font-semibold mb-2">Quality Score</h3>
+            <p class="text-3xl font-bold">{{ "%.1f"|format(summary.quality_score|float) }}</p>
+        </div>
+        <div class="metric-card">
+            <h3 class="text-lg font-semibold mb-2">Type Coverage</h3>
+            <p class="text-3xl font-bold">{{ "%.1f%%"|format(type_analysis.coverage|float * 100) }}</p>
+        </div>
+        <div class="metric-card">
+            <h3 class="text-lg font-semibold mb-2">Documentation Coverage</h3>
+            <p class="text-3xl font-bold">{{ "%.1f%%"|format(documentation_analysis.metrics.coverage|float * 100) }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Charts Section -->
+    <section class="col-span-2">
+        <h2 class="text-2xl font-bold mb-4">Analysis Charts</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="chart-container">
+                {{ charts.type_coverage|safe }}
+            </div>
+            <div class="chart-container">
+                {{ charts.doc_coverage|safe }}
+            </div>
+            <div class="chart-container col-span-2">
+                {{ charts.type_distribution|safe }}
+            </div>
+        </div>
+    </section>
+
+    <!-- Type Analysis -->
+    <section>
+        <h2 class="text-2xl font-bold mb-4">Type System Analysis</h2>
+        <div class="metric-card">
+            <h3 class="text-lg font-semibold mb-4">Type Usage Metrics</h3>
+            <ul class="space-y-2">
+                <li>Interfaces: {{ type_analysis.metrics.interfaces }}</li>
+                <li>Type Aliases: {{ type_analysis.metrics.type_aliases }}</li>
+                <li>Generic Types: {{ type_analysis.metrics.generics }}</li>
+                <li>Utility Types: {{ type_analysis.metrics.utility_types }}</li>
+                <li>Type Guards: {{ type_analysis.metrics.type_guards_count }}</li>
+                <li>Type Assertions: {{ type_analysis.metrics.type_assertions_count }}</li>
+            </ul>
+        </div>
+        {% if type_analysis.suggestions %}
+        <div class="mt-4">
+            <h3 class="text-lg font-semibold mb-2">Suggestions</h3>
+            <ul class="list-disc pl-5 space-y-2">
+                {% for suggestion in type_analysis.suggestions %}
+                <li>{{ suggestion }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Documentation Analysis -->
+    <section>
+        <h2 class="text-2xl font-bold mb-4">Documentation Analysis</h2>
+        <div class="metric-card">
+            <h3 class="text-lg font-semibold mb-4">Documentation Metrics</h3>
+            <ul class="space-y-2">
+                <li>Documented Functions: {{ documentation_analysis.metrics.documented_functions }}/{{ documentation_analysis.metrics.total_functions }}</li>
+                <li>Documented Classes: {{ documentation_analysis.metrics.documented_classes }}/{{ documentation_analysis.metrics.total_classes }}</li>
+                <li>Documented Interfaces: {{ documentation_analysis.metrics.documented_interfaces }}/{{ documentation_analysis.metrics.total_interfaces }}</li>
+                <li>Parameter Docs: {{ documentation_analysis.metrics.param_docs }}</li>
+                <li>Return Type Docs: {{ documentation_analysis.metrics.return_docs }}</li>
+            </ul>
+        </div>
+        {% if documentation_analysis.suggestions %}
+        <div class="mt-4">
+            <h3 class="text-lg font-semibold mb-2">Suggestions</h3>
+            <ul class="list-disc pl-5 space-y-2">
+                {% for suggestion in documentation_analysis.suggestions %}
+                <li>{{ suggestion }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Framework Analysis -->
+    <section class="col-span-2">
+        <h2 class="text-2xl font-bold mb-4">Framework Analysis</h2>
+        <div class="metric-card">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Framework</h3>
+                    <p class="text-xl">{{ framework_analysis.metrics.framework_name|default('Not Detected') }}</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Framework Score</h3>
+                    <p class="text-xl">{{ "%.1f"|format(framework_analysis.metrics.framework_score|float) }}</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Components</h3>
+                    <p class="text-xl">{{ framework_analysis.metrics.component_count }}</p>
+                </div>
+            </div>
+        </div>
+        {% if framework_analysis.suggestions %}
+        <div class="mt-4">
+            <h3 class="text-lg font-semibold mb-2">Framework Suggestions</h3>
+            <ul class="list-disc pl-5 space-y-2">
+                {% for suggestion in framework_analysis.suggestions %}
+                <li>{{ suggestion }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Code Examples -->
+    {% if code_examples %}
+    <section class="col-span-2">
+        <h2 class="text-2xl font-bold mb-4">Code Examples</h2>
+        {% for example in code_examples %}
+        <div class="code-example mb-6">
+            <h3 class="text-lg font-semibold mb-2">{{ example.title }}</h3>
+            <pre><code class="language-typescript">{{ example.code }}</code></pre>
+            {% if example.explanation %}
+            <p class="mt-2 text-gray-600 dark:text-gray-300">{{ example.explanation }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

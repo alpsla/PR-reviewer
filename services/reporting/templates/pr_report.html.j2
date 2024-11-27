@@ -1,0 +1,139 @@
+{% extends "base.html.j2" %}
+
+{% block title %}Pull Request Analysis Report{% endblock %}
+
+{% block header %}Pull Request Analysis Report{% endblock %}
+
+{% block header_content %}
+<div class="bg-blue-100 dark:bg-blue-900 rounded-lg p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="metric-card">
+            <h3 class="text-lg font-semibold mb-2">Quality Score Change</h3>
+            <p class="text-3xl font-bold {% if diff_analysis.quality_score_change >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                {{ "%+.1f"|format(diff_analysis.quality_score_change) }}
+            </p>
+        </div>
+        <div class="metric-card">
+            <h3 class="text-lg font-semibold mb-2">Type Coverage Change</h3>
+            <p class="text-3xl font-bold {% if diff_analysis.type_coverage_change >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                {{ "%+.1f%%"|format(diff_analysis.type_coverage_change) }}
+            </p>
+        </div>
+        <div class="metric-card">
+            <h3 class="text-lg font-semibold mb-2">Doc Coverage Change</h3>
+            <p class="text-3xl font-bold {% if diff_analysis.doc_coverage_change >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                {{ "%+.1f%%"|format(diff_analysis.doc_coverage_change) }}
+            </p>
+        </div>
+        <div class="metric-card">
+            <h3 class="text-lg font-semibold mb-2">Issues</h3>
+            <p class="text-3xl">
+                <span class="text-red-600">+{{ diff_analysis.new_issues }}</span>
+                <span class="text-gray-400">/</span>
+                <span class="text-green-600">-{{ diff_analysis.resolved_issues }}</span>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Comparison Charts -->
+    <section class="col-span-2">
+        <h2 class="text-2xl font-bold mb-4">Changes Overview</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="chart-container">
+                {{ charts.type_coverage_comparison|safe }}
+            </div>
+            <div class="chart-container">
+                {{ charts.documentation_changes|safe }}
+            </div>
+        </div>
+    </section>
+
+    <!-- Quality Gates -->
+    <section>
+        <h2 class="text-2xl font-bold mb-4">Quality Gates</h2>
+        <div class="metric-card">
+            {% for gate in summary.quality_gates %}
+            <div class="mb-4 last:mb-0">
+                <h3 class="text-lg font-semibold mb-2">{{ gate.name }}</h3>
+                <div class="flex items-center">
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mr-2">
+                        <div class="bg-{% if gate.status %}green-600{% else %}red-600{% endif %} h-2.5 rounded-full" 
+                             style="width: {{ (gate.actual / gate.target * 100)|min(100) }}%"></div>
+                    </div>
+                    <span class="text-sm whitespace-nowrap">{{ "%.1f"|format(gate.actual) }}/{{ gate.target }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Action Items -->
+    <section>
+        <h2 class="text-2xl font-bold mb-4">Action Items</h2>
+        <div class="metric-card">
+            {% if summary.action_items %}
+            <div class="space-y-4">
+                {% for item in summary.action_items %}
+                <div class="p-3 rounded-lg {% if item.severity == 'critical' %}bg-red-100 dark:bg-red-900{% elif item.severity == 'high' %}bg-yellow-100 dark:bg-yellow-900{% else %}bg-blue-100 dark:bg-blue-900{% endif %}">
+                    <h4 class="font-semibold">{{ item.title }}</h4>
+                    <p class="text-sm mt-1">{{ item.description }}</p>
+                    {% if item.file %}
+                    <p class="text-xs mt-1 text-gray-600 dark:text-gray-400">{{ item.file }}:{{ item.line }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-600 dark:text-gray-400">No action items found</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Code Examples -->
+    {% if code_examples %}
+    <section class="col-span-2">
+        <h2 class="text-2xl font-bold mb-4">Changed Code Analysis</h2>
+        {% for example in code_examples %}
+        <div class="code-example mb-6">
+            <h3 class="text-lg font-semibold mb-2">{{ example.title }}</h3>
+            <pre><code class="language-typescript">{{ example.code }}</code></pre>
+            {% if example.explanation %}
+            <p class="mt-2 text-gray-600 dark:text-gray-300">{{ example.explanation }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    <!-- Best Practices -->
+    <section class="col-span-2">
+        <h2 class="text-2xl font-bold mb-4">Best Practices Review</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% if summary.best_practices.strong_areas %}
+            <div class="metric-card">
+                <h3 class="text-lg font-semibold mb-4 text-green-600">Strong Areas</h3>
+                <ul class="list-disc pl-5 space-y-2">
+                    {% for area in summary.best_practices.strong_areas %}
+                    <li>{{ area }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            {% if summary.best_practices.needs_improvement %}
+            <div class="metric-card">
+                <h3 class="text-lg font-semibold mb-4 text-yellow-600">Areas for Improvement</h3>
+                <ul class="list-disc pl-5 space-y-2">
+                    {% for area in summary.best_practices.needs_improvement %}
+                    <li>{{ area }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}

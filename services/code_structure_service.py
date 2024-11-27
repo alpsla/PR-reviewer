@@ -11,6 +11,7 @@ import tempfile
 import subprocess
 import json
 from functools import lru_cache
+import traceback
 
 # Configure logging
 logging.basicConfig(
@@ -110,7 +111,7 @@ class FileAnalyzer:
         # Check for common security patterns
         patterns = {
             'sql_injection':
-            r'(?i)(execute|raw)\s*\(\s*[\'"][^\']*\%s[^\']*[\'"]\s*\)',
+            r'(?i)(execute|raw)\s*\(\s*[\'"][^\']*\%s[\'"]\s*\)',
             'xss': r'(?i)innerHTML\s*=|document\.write\(',
             'command_injection':
             r'(?i)(subprocess\.call|os\.system|eval|exec)\(',
@@ -301,11 +302,50 @@ class CodeStructureService:
 
     def __init__(self):
         """Initialize the service with enhanced capabilities"""
-        self.metrics_cache = {}  # Cache for analysis results
-        self.language_stats = {}  # Store language detection results
-        self.dependency_graph = {}  # Store dependency relationships
-        self.api_stability_info = {}  # Store API stability information
-        self._init_language_analyzers()
+        self.logger = get_logger(__name__, "code_structure")
+        self.logger.set_context(service="code_structure")
+        
+        try:
+            # Initialize Python analyzer
+            from services.code_analysis.analyzers.python_analyzer import PythonAnalyzer
+            self.python_analyzer = PythonAnalyzer()
+            self.logger.info("Python analyzer initialized successfully")
+            
+            # Initialize JavaScript/TypeScript analyzers
+            from services.code_analysis.analyzers.javascript_analyzer import JavaScriptAnalyzer
+            from services.code_analysis.analyzers.typescript_analyzer import TypeScriptAnalyzer
+            self.javascript_analyzer = JavaScriptAnalyzer()
+            self.typescript_analyzer = TypeScriptAnalyzer()
+            self.logger.info("JavaScript/TypeScript analyzers initialized successfully")
+            
+        except ImportError as e:
+            self.logger.error("Failed to import analyzer module", extra={
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            })
+            raise
+        except Exception as e:
+            self.logger.error("Failed to initialize analyzers", extra={
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            })
+            raise
+
+        # Initialize caches and storage
+        self.metrics_cache = {}
+        self.language_stats = {}
+        self.dependency_graph = {}
+        self.api_stability_info = {}
+
+        try:
+            self._init_language_analyzers()
+            self.logger.info("Language analyzers configuration completed")
+        except Exception as e:
+            self.logger.error("Failed to configure language analyzers", extra={
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            })
+            raise
 
     def _get_cache_key(self, content: str, filename: str) -> str:
         """Generate cache key for analysis results"""
@@ -398,7 +438,18 @@ class CodeStructureService:
             # Skip empty content
             if not content.strip():
                 logger.info(f"Skipping empty file: {filename}")
-                return self._empty_result()
+                return {
+                    'filename': filename,
+                    'type': 'empty',
+                    'size': 0,
+                    'structure': {},
+                    'metrics': {
+                        'complexity': 0,
+                        'lines': 0,
+                        'functions': 0,
+                        'classes': 0
+                    }
+                }
 
             # Get language configuration
             ext = Path(filename).suffix.lower()
@@ -466,6 +517,42 @@ class CodeStructureService:
         except Exception as e:
             logger.error(f"Error during analysis: {str(e)}")
             return self._empty_result()
+
+    def analyze_files(self, files: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Analyze a list of files and return their structures."""
+        results = []
+        for file_info in files:
+            try:
+                filename = file_info.get('filename', '')
+                logger.info(f"Starting analysis for file: {filename}")
+                
+                # Get file content from various possible sources
+                content = None
+                for key in ['patch', 'content', 'source', 'raw']:
+                    if key in file_info and file_info[key]:
+                        content = file_info[key]
+                        break
+                
+                if not content:
+                    logger.warning(f"No content found for file: {filename}")
+                    continue
+                
+                # Create file info with content
+                analysis_info = {
+                    'filename': filename,
+                    'content': content
+                }
+                
+                # Analyze file
+                result = self.analyze_file(analysis_info)
+                if result:
+                    results.append(result)
+                    
+            except Exception as e:
+                logger.error(f"Error analyzing file {filename}: {str(e)}")
+                continue
+                
+        return results
 
     def _analyze_documentation(self, content: str, filename: str) -> Dict[str, Any]:
         """Analyze documentation quality and coverage with support for multiple doc styles."""
@@ -552,10 +639,10 @@ class CodeStructureService:
 
             # Calculate complexity metrics
             total_complexity = ComplexityMetrics(
-                cyclomatic_complexity=metrics.get('CCN', 0),
-                cognitive_complexity=len(re.findall(r'\b(if|while|for|switch)\b', content)),
+                cyclomatic_complexity=self._calculate_cyclomatic_complexity(content),
+                cognitive_complexity=self._calculate_cognitive_complexity(content),
                 nesting_depth=self._calculate_nesting_depth(content),
-                maintainability_index=100.0  # Default value
+                maintainability_index=100.0
             )
 
             # Add documentation analysis
@@ -1039,3 +1126,66 @@ class CodeStructureService:
         if hasattr(node, 'loc'):
             return node.loc.end.line - node.loc.start.line + 1
         return 1
+
+    def analyze_file(self, file_info: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Analyze a single file and return its structure."""
+        try:
+            filename = file_info.get('filename', '')
+            content = file_info.get('content', '')
+            
+            if not filename:
+                logger.error("Invalid input: filename is empty")
+                return None
+                
+            # Get file extension
+            ext = filename.split('.')[-1].lower() if '.' in filename else ''
+            
+            # Create default structure
+            default_structure = {
+                'filename': filename,
+                'type': 'empty',
+                'size': 0,
+                'structure': {},
+                'metrics': {
+                    'complexity': 0,
+                    'lines': 0,
+                    'functions': 0,
+                    'classes': 0
+                }
+            }
+            
+            if not content or not content.strip():
+                logger.info(f"Skipping empty file: {filename}")
+                return default_structure
+            
+            # Select appropriate analyzer
+            if ext in ['py']:
+                result = self.python_analyzer.analyze_code(content, filename)
+            elif ext in ['js', 'jsx']:
+                result = self.javascript_analyzer.analyze_code(content, filename)
+            elif ext in ['ts', 'tsx']:
+                result = self.typescript_analyzer.analyze_code(content, filename)
+            else:
+                logger.info(f"Unsupported file type: {ext}")
+                return default_structure
+                
+            # Convert analyzer result to dictionary format
+            if not isinstance(result, dict):
+                result = {
+                    'filename': filename,
+                    'type': ext,
+                    'size': len(content.encode('utf-8')),
+                    'structure': getattr(result, 'structures', []),
+                    'metrics': {
+                        'complexity': getattr(result, 'total_complexity', {}).get('cyclomatic_complexity', 0),
+                        'lines': len(content.splitlines()),
+                        'functions': len([s for s in getattr(result, 'structures', []) if s.get('type') == 'function']),
+                        'classes': len([s for s in getattr(result, 'structures', []) if s.get('type') == 'class'])
+                    }
+                }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error analyzing file: {str(e)}")
+            return None

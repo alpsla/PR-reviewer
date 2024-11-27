@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypeScript Analysis Report</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8 text-gray-900">TypeScript Analysis Report</h1>
+        
+        <!-- React application mount point -->
+        <div id="typescript-report"></div>
+    </div>
+
+    <!-- Load React components -->
+    <script type="text/babel" src="{{ url_for('static', filename='components/MetricComponents.jsx') }}"></script>
+    <script type="text/babel" src="{{ url_for('static', filename='components/TypeScriptReport.jsx') }}"></script>
+    
+    <script type="text/babel">
+        // Initialize analysis data
+        const analysisData = {{ analysis_data | tojson | safe }};
+        
+        // Render the React application
+        ReactDOM.render(
+            <TypeScriptReport analysis={analysisData} />,
+            document.getElementById('typescript-report')
+        );
+    </script>
+</body>
+</html>

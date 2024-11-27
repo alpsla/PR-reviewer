@@ -140,79 +140,108 @@ class DependencyService:
         """Run dependency-cruiser analysis with improved error handling"""
         try:
             logger.info("Configuring dependency-cruiser analysis")
+            
+            # Initialize git repository in temp directory
+            try:
+                subprocess.run(['git', 'init'], cwd=self.temp_dir, capture_output=True, text=True)
+                # Create initial commit to avoid git errors
+                subprocess.run(['git', 'config', 'user.email', 'temp@example.com'], cwd=self.temp_dir, capture_output=True)
+                subprocess.run(['git', 'config', 'user.name', 'Temp User'], cwd=self.temp_dir, capture_output=True)
+                subprocess.run(['git', 'add', '.'], cwd=self.temp_dir, capture_output=True)
+                subprocess.run(['git', 'commit', '-m', 'Initial commit'], cwd=self.temp_dir, capture_output=True)
+            except Exception as e:
+                logger.warning(f"Failed to initialize git repository: {str(e)}")
+            
+            # Install dependency-cruiser locally in temp directory
+            package_json = {
+                "name": "temp-analysis",
+                "version": "1.0.0",
+                "private": True,
+                "dependencies": {
+                    "dependency-cruiser": "^13.1.5",
+                    "@types/react": "*",
+                    "@types/react-dom": "*",
+                    "typescript": "^5.0.0"
+                }
+            }
+            with open(os.path.join(self.temp_dir, 'package.json'), 'w') as f:
+                json.dump(package_json, f)
+            
+            # Create tsconfig.json for TypeScript support
+            tsconfig = {
+                "compilerOptions": {
+                    "target": "es2020",
+                    "module": "commonjs",
+                    "jsx": "react",
+                    "esModuleInterop": True,
+                    "skipLibCheck": True,
+                    "forceConsistentCasingInFileNames": True
+                }
+            }
+            with open(os.path.join(self.temp_dir, 'tsconfig.json'), 'w') as f:
+                json.dump(tsconfig, f)
+            
+            # Install dependencies locally
+            install_cmd = ['npm', 'install']
+            result = subprocess.run(install_cmd, cwd=self.temp_dir, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                logger.error(f"Failed to install dependencies: {result.stderr}")
+                return None
+            
             # Custom dependency-cruiser configuration
             config = {
-                "forbidden": [
-                    {
-                        "name": "no-circular",
-                        "severity": "error",
-                        "from": {},
-                        "to": {
-                            "circular": True
-                        }
-                    }
-                ],
+                "extends": "dependency-cruiser/configs/recommended-strict",
                 "options": {
                     "doNotFollow": {
-                        "path": "node_modules",
-                        "dependencyTypes": [
-                            "npm",
-                            "npm-dev",
-                            "npm-optional",
-                            "npm-peer",
-                            "npm-bundled"
-                        ]
+                        "path": "node_modules"
                     },
-                    "exclude": "\\.(spec|test|config)\\.(js|ts|jsx|tsx)$|\\.(replit|json|md|txt|svg)$",
-                    "maxDepth": 6,
-                    "includeOnly": "\\.(js|jsx|ts|tsx|py)$",
-                    "moduleSystems": ["amd", "cjs", "es6", "tsd"],
-                    "tsConfig": None,
-                    "tsPreCompilationDeps": "true",
-                    "preserveSymlinks": "false",
-                    "webpackConfig": None,
+                    "baseDir": ".",
+                    "tsConfig": {
+                        "fileName": "./tsconfig.json"
+                    },
                     "enhancedResolveOptions": {
                         "exportsFields": ["exports"],
                         "conditionNames": ["import", "require", "node", "default"],
-                        "extensions": [".js", ".jsx", ".ts", ".tsx", ".py"]
-                    },
-                    "cache": {
-                        "enabled": "true",
-                        "strategy": "metadata"
+                        "extensions": [".js", ".jsx", ".ts", ".tsx"]
                     }
                 }
             }
             
-            config_path = os.path.join(str(self.temp_dir), '.dependency-cruiser.json')
+            config_path = os.path.join(self.temp_dir, '.dependency-cruiser.json')
             try:
                 with open(config_path, 'w') as f:
-                    json.dump(config, f, indent=2)
+                    json.dump(config, f)
                 logger.info("Successfully wrote dependency-cruiser configuration")
             except Exception as e:
-                logger.error(f"Failed to write dependency-cruiser configuration: {str(e)}")
+                logger.error(f"Failed to write dependency-cruiser config: {str(e)}")
                 return None
                 
             # Run dependency-cruiser with JSON output and handle errors
             try:
                 result = subprocess.run(
-                    ['npx', 'depcruise', '--config', '.dependency-cruiser.json', '--output-type', 'json', '.'],
+                    ['./node_modules/.bin/depcruise', '--output-type', 'json', '--config', '.dependency-cruiser.json', '.'],
                     cwd=self.temp_dir,
                     capture_output=True,
                     text=True
                 )
                 
-                if result.returncode == 0:
-                    return json.loads(result.stdout)
-                else:
+                if result.returncode != 0:
                     logger.error(f"dependency-cruiser failed: {result.stderr}")
                     return None
                     
-            except Exception as e:
-                logger.error(f"Failed to run dependency-cruiser: {str(e)}")
+                try:
+                    return json.loads(result.stdout)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse dependency-cruiser output: {str(e)}")
+                    return None
+                    
+            except subprocess.CalledProcessError as e:
+                logger.error(f"dependency-cruiser execution failed: {str(e)}")
                 return None
                 
         except Exception as e:
-            logger.error(f"Failed to run dependency-cruiser: {str(e)}")
+            logger.error(f"Error in dependency analysis: {str(e)}")
             return None
     
     def _run_madge(self) -> Optional[Dict]:
@@ -390,46 +419,6 @@ class DependencyService:
             total_duplicated = sum(block_size for _ in duplication['duplicate_blocks'])
             duplication['similarity_score'] = total_duplicated / len(lines)
         
-    def _calculate_comment_ratio(self, module: Dict) -> float:
-        """Calculate the ratio of comments to code"""
-        if not module.get('source'):
-            return 0.0
-        
-        content = module.get('source', '')
-        lines = content.splitlines()
-        
-        comment_lines = 0
-        code_lines = 0
-        in_multiline = False
-        
-        for line in lines:
-            stripped = line.strip()
-            
-            # Skip empty lines
-            if not stripped:
-                continue
-                
-            # Handle multiline comments
-            if stripped.startswith('"""') or stripped.startswith("'''"):
-                if in_multiline:
-                    in_multiline = False
-                else:
-                    in_multiline = True
-                comment_lines += 1
-                continue
-                
-            # Count comment and code lines
-            if in_multiline:
-                comment_lines += 1
-            elif stripped.startswith('#'):
-                comment_lines += 1
-            else:
-                code_lines += 1
-        
-        total_lines = comment_lines + code_lines
-        return round(comment_lines / total_lines, 2) if total_lines > 0 else 0.0
-        return duplication
-
     def _calculate_comment_ratio(self, module: Dict) -> float:
         """Calculate the ratio of comments to code"""
         if not module.get('source'):

@@ -20,7 +20,8 @@ from plugins.documentation_parser import DocumentationParser
 class ClaudeService:
     def __init__(self, api_key: str):
         """Initialize Claude service with proper error handling"""
-        self.use_mock = True
+        self.api_key = api_key
+        self.use_mock = False  # Default to real service
         self.init_error = None
         self.client = None
         self.dependency_service = None
@@ -31,6 +32,7 @@ class ClaudeService:
         if not api_key:
             logger.warning("No Claude API key provided, falling back to mock service")
             self.init_error = "No API key provided"
+            self.use_mock = True
             return
             
         try:
@@ -48,18 +50,23 @@ class ClaudeService:
             self.dependency_service = DependencyService()
             self.code_structure_service = CodeStructureService()
             self.language_detection_service = LanguageDetectionService()
-            
-            # Initialize documentation parser
             self.doc_parser = DocumentationParser()
             self.doc_parser.initialize()
             
-            self.use_mock = False
             logger.info("Claude API client and services initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize services: {str(e)}")
             self.use_mock = True
             self.init_error = str(e)
     
+    def detect_languages(self, files):
+        """Detect languages from the files."""
+        try:
+            return self.language_detection_service.detectFromContentSync(files)
+        except Exception as e:
+            logger.error("Language Determination: Failed to detect languages", error=str(e))
+            return {}
+
     def analyze_pr_sync(self, context: Dict) -> Dict:
         """Synchronous version of analyze_pr that handles documentation parsing"""
         if self.use_mock:
@@ -85,7 +92,7 @@ class ClaudeService:
                 # Perform language detection
                 logger.info("Running language detection")
                 try:
-                    language_detection = self.language_detection_service.detect_from_files(context['files'])
+                    language_detection = self.detect_languages(context['files'])
                     context['language_detection'] = language_detection
                     logger.info(f"Language Determination: Primary language detected: {language_detection['primary']['name']}")
                 except Exception as e:
@@ -100,23 +107,7 @@ class ClaudeService:
                 logger.info("Running code structure analysis")
                 structure_analysis = {}
                 if self.code_structure_service:
-                    for file in context['files']:
-                        try:
-                            analysis = self.code_structure_service.analyze_code(
-                                file.get('content', ''),
-                                file['filename']
-                            )
-                            if isinstance(analysis, dict):
-                                structure_analysis[file['filename']] = analysis
-                            else:
-                                structure_analysis[file['filename']] = {
-                                    'structures': getattr(analysis, 'structures', []),
-                                    'imports': getattr(analysis, 'imports', []),
-                                    'total_complexity': getattr(analysis, 'total_complexity', {})
-                                }
-                        except Exception as e:
-                            logger.error(f"Error analyzing {file['filename']}: {str(e)}")
-                context['structure_analysis'] = structure_analysis
+                    structure_analysis = self.analyze_structure(context['files'])
             
             logger.info("Building analysis prompt")
             prompt = self._build_analysis_prompt(context)
@@ -415,6 +406,37 @@ Structure your response using HTML with Bootstrap classes:
             prompt += "\n\n" + self._format_documentation_analysis(context['documentation_analysis'])
 
         return prompt
+    
+    def analyze_structure(self, files):
+        """Analyze code structure."""
+        try:
+            # Convert files to expected format
+            analysis_files = []
+            for file_info in files:
+                # Get content from various possible sources
+                content = (
+                    file_info.get('patch', '') or 
+                    file_info.get('content', '') or 
+                    file_info.get('source', '') or 
+                    file_info.get('raw', '')
+                )
+                
+                if not content:
+                    self.logger.warning(f"No content found for file: {file_info.get('filename', 'unknown')}")
+                    continue
+                
+                analysis_files.append({
+                    'filename': file_info.get('filename', ''),
+                    'content': content,
+                    'size': len(content.encode('utf-8'))
+                })
+            
+            return self.code_structure_service.analyze_files(analysis_files)
+            
+        except Exception as e:
+            self.logger.error(f"Error in code structure analysis: {str(e)}")
+            return []
+    
     def _format_files(self, files: List[Dict]) -> str:
         """Format files list for prompt"""
         if not files:
@@ -539,7 +561,7 @@ Structure your response using HTML with Bootstrap classes:
                 # Perform language detection
                 logger.info("Running language detection")
                 try:
-                    language_detection = self.language_detection_service.detect_from_files(context['files'])
+                    language_detection = self.detect_languages(context['files'])
                     context['language_detection'] = language_detection
                     logger.info(f"Language Determination: Primary language detected: {language_detection['primary']['name']}")
                 except Exception as e:
@@ -555,23 +577,7 @@ Structure your response using HTML with Bootstrap classes:
                 # Run code structure analysis if available
                 if self.code_structure_service:
                     logger.info("Running code structure analysis")
-                    structure_analysis = {}
-                    for file in context['files']:
-                        try:
-                            analysis = self.code_structure_service.analyze_code(
-                                file.get('content', ''),
-                                file['filename']
-                            )
-                            if isinstance(analysis, dict):
-                                structure_analysis[file['filename']] = analysis
-                            else:
-                                structure_analysis[file['filename']] = {
-                                    'structures': getattr(analysis, 'structures', []),
-                                    'imports': getattr(analysis, 'imports', []),
-                                    'total_complexity': getattr(analysis, 'total_complexity', {})
-                                }
-                        except Exception as e:
-                            logger.error(f"Error analyzing {file['filename']}: {str(e)}")
+                    structure_analysis = self.analyze_structure(context['files'])
                     context['structure_analysis'] = structure_analysis
             
             logger.info("Building analysis prompt")
