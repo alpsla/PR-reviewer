@@ -7,41 +7,44 @@ from database import db
 from services.github_service import GitHubService
 from services.claude_service import ClaudeService
 from utils.pr_parser import parse_pr_url
+from utils.logging_utils import setup_logging, get_logger
 from datetime import datetime
 from typing import Optional
 import jwt
 from urllib.parse import urlparse
 from sqlalchemy import text
+from dotenv import load_dotenv
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
+# Load environment variables from .env file
+load_dotenv()
+
+# Set up logging
+logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+os.makedirs(logs_dir, exist_ok=True)
+
+# Configure main application logger
+logger = get_logger(__name__, "main")
+logger.set_context(
+    app_name="pr_reviewer",
+    environment=os.getenv("FLASK_ENV", "development")
 )
-logger = logging.getLogger(__name__)
-
-def verify_github_token(token: Optional[str]) -> tuple[bool, str]:
-    """Verify GitHub token permissions with detailed feedback"""
-    if not token:
-        return False, "GitHub token not found in environment variables"
-    
-    try:
-        # Initialize service to test token
-        github_service = GitHubService(token)
-        if github_service.token_valid:
-            return True, "Token verified successfully"
-        return False, "Token validation failed"
-    except Exception as e:
-        return False, f"Unexpected error validating token: {str(e)}"
 
 def create_app():
+    """Create and configure the Flask application."""
+    logger.info("Initializing Flask application", 
+                extra={
+                    "flask_env": os.getenv("FLASK_ENV", "development"),
+                    "debug_mode": os.getenv("FLASK_DEBUG", "True").lower() == "true"
+                })
+    
     # Initialize Flask app
     app = Flask(__name__)
     CORS(app)
     app.secret_key = os.environ.get("FLASK_SECRET_KEY", "pr_review_assistant_secret")
+
+    # Load configuration
+    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'development_secret_key')
+    app.config['DEBUG'] = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
 
     # Configure PostgreSQL database
     db_url = os.environ.get("DATABASE_URL")
@@ -89,39 +92,27 @@ def create_app():
     github_token: Optional[str] = os.environ.get("GITHUB_TOKEN")
     claude_api_key: Optional[str] = os.environ.get("CLAUDE_API_KEY")
 
-    if not github_token:
-        logger.warning("GitHub token not found in environment variables")
-    else:
-        token_valid, token_message = verify_github_token(github_token)
-        if not token_valid:
-            logger.warning(f"GitHub token validation failed: {token_message}")
-        else:
-            logger.info("GitHub token validated successfully")
-
-    if not claude_api_key:
-        logger.warning("Claude API key not found in environment variables")
-
-    # Initialize services without failing startup
-    # Initialize services as module-level variables
-    github_service = None
-    claude_service = None
-    
     try:
-        if github_token:
-            github_service = GitHubService(github_token)
-            if not github_service.token_valid:
-                logger.error("GitHub token validation failed")
-                github_service = None
-        else:
-            logger.warning("GitHub token not provided")
-            
-        if claude_api_key:
-            claude_service = ClaudeService(claude_api_key)
-        else:
-            logger.warning("Claude API key not provided")
-            
+        logger.debug(f"GitHub Token present: {'Yes' if github_token else 'No'}")
+        logger.debug(f"Claude API Key present: {'Yes' if claude_api_key else 'No'}")
+        
+        # Initialize GitHub service
+        github_service = GitHubService(github_token)
+        if not github_service.token_valid:
+            logger.error("GitHub token validation failed")
+            raise ValueError("GitHub token validation failed")
+        logger.info("GitHub token validated successfully")
+        
+        # Initialize Claude service
+        claude_service = ClaudeService(claude_api_key)
+        if claude_service.init_error:
+            logger.error(f"Claude service initialization failed: {claude_service.init_error}")
+            raise ValueError(f"Claude service initialization failed: {claude_service.init_error}")
+        logger.info("Claude service initialized successfully")
+        
     except Exception as e:
-        logger.error(f"Error initializing services: {str(e)}")
+        logger.error(f"Failed to initialize services: {str(e)}")
+        raise
 
     @app.route('/', methods=['GET'])
     def index():
@@ -144,95 +135,257 @@ def create_app():
             logger.error(f"Health check failed: {str(e)}")
             return jsonify({"status": "unhealthy", "message": str(e)}), 500
 
-    @app.route('/review', methods=['GET', 'POST'])
+    @app.route('/review', methods=['POST'])
     def review():
-        if request.method == 'GET':
-            return redirect(url_for('index'))
-            
-        pr_url = request.form.get('pr_url')
-        if not pr_url:
-            flash('Please provide a PR URL', 'error')
-            return redirect(url_for('index'))
-        
+        """Handle PR review request."""
         try:
+            # Validate input
+            pr_url = request.form.get('pr_url')
+            if not pr_url:
+                logger.error("No PR URL provided")
+                flash('Please provide a PR URL', 'error')
+                return redirect(url_for('index'))
+
             logger.info(f"Processing review request for PR: {pr_url}")
             
-            # Parse PR URL
-            pr_details = parse_pr_url(pr_url)
-            if not pr_details:
-                logger.error("Invalid PR URL format")
-                flash('Invalid PR URL format. Please provide a valid GitHub pull request URL.', 'error')
-                return redirect(url_for('index'))
-
-            # Verify GitHub token before proceeding
-            if not github_token:
-                flash('GitHub token is not configured. Please check environment variables.', 'error')
-                return redirect(url_for('index'))
-            
-            token_valid, token_message = verify_github_token(github_token)
-            if not token_valid:
-                flash(f'GitHub token validation failed: {token_message}', 'error')
-                return redirect(url_for('index'))
-
-            # Verify services are available
-            if not github_service:
-                flash('GitHub service not available. Please check configuration.', 'error')
-                return redirect(url_for('index'))
-                
-            if not claude_service:
-                flash('Claude service not available. Please check configuration.', 'error')
-                return redirect(url_for('index'))
-
-            # Fetch PR data
+            # Get PR data from GitHub
             try:
                 logger.info("Fetching PR data from GitHub")
-                pr_data = github_service.fetch_pr_data(pr_details)
+                pr_info = github_service.get_pr_info(pr_url)
+                if not pr_info:
+                    logger.error("Failed to fetch PR data from GitHub")
+                    flash('Failed to fetch PR data from GitHub', 'error')
+                    return redirect(url_for('index'))
+            except Exception as e:
+                logger.error(f"GitHub API error: {str(e)}")
+                flash(f'Error accessing GitHub: {str(e)}', 'error')
+                return redirect(url_for('index'))
                 
-                # Fetch files and comments using sync methods
-                files = github_service.fetch_pr_files_sync(pr_details)
-                comments = github_service.fetch_pr_comments_sync(pr_details)
-            except ValueError as e:
-                flash(f'Error accessing PR: {str(e)}', 'error')
+            # Filter TypeScript files and get their content
+            try:
+                ts_files = []
+                repo_name = f"{pr_info['base']['repo']['full_name']}"
+                head_sha = pr_info['head']['sha']
+                
+                for file in pr_info['files']:
+                    if not file['filename'].endswith(('.ts', '.tsx')):
+                        continue
+                        
+                    # Get file content
+                    try:
+                        content = None
+                        if file['status'] != 'removed':
+                            content = github_service.get_file_content(repo_name, file['filename'], head_sha)
+                            if not content and 'raw_url' in file:
+                                try:
+                                    import requests
+                                    response = requests.get(file['raw_url'])
+                                    if response.status_code == 200:
+                                        content = response.text
+                                except Exception as e:
+                                    logger.warning(f"Failed to get content from raw_url for {file['filename']}: {str(e)}")
+                        
+                        file_info = {
+                            'filename': file['filename'],
+                            'content': content,
+                            'status': file['status'],
+                            'additions': file.get('additions', 0),
+                            'deletions': file.get('deletions', 0),
+                            'changes': file.get('changes', 0),
+                            'patch': file.get('patch'),
+                            'raw_url': file.get('raw_url'),
+                            'contents_url': file.get('contents_url')
+                        }
+                        ts_files.append(file_info)
+                        logger.debug(f"Added {file['filename']} to analysis queue with content length: {len(content) if content else 0}")
+                    except Exception as e:
+                        logger.error(f"Error getting content for {file['filename']}: {str(e)}")
+                        continue
+                
+                if not ts_files:
+                    logger.warning("No TypeScript files found in PR")
+                    flash('No TypeScript files found in this PR', 'warning')
+                    return redirect(url_for('index'))
+                    
+                logger.info(f"Found {len(ts_files)} TypeScript files to analyze")
+                
+            except Exception as e:
+                logger.error(f"Error processing PR files: {str(e)}")
+                flash('Error processing PR files', 'error')
+                return redirect(url_for('index'))
+                
+            # Run TypeScript analysis
+            try:
+                logger.info("Starting TypeScript analysis")
+                from services.code_analysis.analyzers.typescript_analyzer import TypeScriptAnalyzer, AnalysisError
+                typescript_analyzer = TypeScriptAnalyzer()
+                ts_analysis = typescript_analyzer.analyze_files(ts_files)
+            except AnalysisError as e:
+                logger.error(f"TypeScript analysis error: {str(e)}")
+                flash(f'Analysis error: {str(e)}', 'error')
+                return redirect(url_for('index'))
+            except Exception as e:
+                logger.error(f"Unexpected error in TypeScript analysis: {str(e)}")
+                flash('An unexpected error occurred during analysis', 'error')
                 return redirect(url_for('index'))
             
-            # Analyze with Claude
-            logger.info("Analyzing PR with Claude")
+            # Convert analysis results
             try:
-                context = {
-                    'pr_data': pr_data,
-                    'files': files,
-                    'comments': comments
+                analysis_dict = ts_analysis.to_dict()
+                analysis_results = {
+                    'overall_health': float(analysis_dict['quality_score']),
+                    'type_safety': float(analysis_dict['type_analysis']['metrics']['type_coverage']),
+                    'documentation': float(analysis_dict['doc_analysis']['metrics']['coverage']),
+                    'code_quality': float(analysis_dict['quality_score']),
+                    'type_issues': analysis_dict['type_analysis']['examples'],
+                    'documentation_issues': analysis_dict['doc_analysis']['issues'],
+                    'quality_gates': analysis_dict['quality_gates'],
+                    'action_items': analysis_dict['action_items'],
+                    'best_practices': analysis_dict['best_practices']
+                }
+            except Exception as e:
+                logger.error(f"Error converting analysis results: {str(e)}")
+                analysis_results = {
+                    'overall_health': 0.0,
+                    'type_safety': 0.0,
+                    'documentation': 0.0,
+                    'code_quality': 0.0,
+                    'type_issues': [],
+                    'documentation_issues': [],
+                    'quality_gates': [],
+                    'action_items': [],
+                    'best_practices': {'strong_areas': [], 'needs_improvement': []}
+                }
+                flash('Error processing analysis results', 'warning')
+            
+            # Store results in database
+            try:
+                # Convert analysis results to JSON-serializable format
+                review_content = {
+                    'analysis': analysis_results,
+                    'pr_url': pr_url,
+                    'timestamp': datetime.utcnow().isoformat()
                 }
                 
-                review_data = claude_service.analyze_pr_sync(context)
-            except ValueError as e:
-                flash(f'Error analyzing PR: {str(e)}', 'error')
-                return redirect(url_for('index'))
+                review = Review(
+                    pr_url=pr_url,
+                    review_content=str(review_content),
+                    structured=True
+                )
+                db.session.add(review)
+                db.session.commit()
+                logger.info(f"Saved review for PR: {pr_url}")
+            except Exception as e:
+                logger.error(f"Database error: {str(e)}", exc_info=True)
+                db.session.rollback()
+                flash('Error saving analysis results', 'warning')
+
+            # Prepare template variables
+            template_vars = {
+                'pr_url': pr_url,
+                'current_time': datetime.utcnow(),
+                'review': {
+                    'is_mock': False,
+                    'structured': True,
+                    'mock_reason': None,
+                    'summary': str(analysis_results.get('summary', '')),
+                },
+                'analysis': {
+                    'overall_health': float(analysis_dict.get('quality_score', 0.0)),
+                    'type_safety': float(analysis_dict.get('type_analysis', {}).get('metrics', {}).get('type_coverage', 0.0)),
+                    'documentation': float(analysis_dict.get('doc_analysis', {}).get('metrics', {}).get('coverage', 0.0)),
+                    'code_quality': float(analysis_dict.get('quality_score', 0.0)),
+                    'type_issues': analysis_dict.get('type_analysis', {}).get('examples', []),
+                    'documentation_issues': analysis_dict.get('doc_analysis', {}).get('issues', []),
+                    'quality_gates': analysis_dict.get('quality_gates', []),
+                    'action_items': analysis_dict.get('action_items', []),
+                    'best_practices': {
+                        'strong_areas': analysis_dict.get('best_practices', {}).get('strong_areas', []),
+                        'needs_improvement': analysis_dict.get('best_practices', {}).get('needs_improvement', [])
+                    }
+                }
+            }
             
-            # Store review data in session for save/comment actions
-            session['pr_details'] = pr_details
-            session['review_data'] = review_data
-            session['pr_url'] = pr_url
-            
-            # Log mock review usage
-            if review_data.get('is_mock', False):
-                logger.warning(f"Using mock review. Reason: {review_data.get('mock_reason', 'unknown')}")
-                flash('Using automated review service fallback. Some features may be limited.', 'warning')
-            
-            return render_template('review.html', 
-                review=review_data, 
-                pr_url=pr_url,
-                current_time=datetime.utcnow()
-            )
-            
-        except ValueError as e:
-            logger.error(f"Validation error: {str(e)}")
-            flash(f'Validation Error: {str(e)}', 'error')
-            return redirect(url_for('index'))
+            return render_template('review.html', **template_vars)
         except Exception as e:
-            logger.error(f"Unexpected error during review: {str(e)}")
-            flash(f'Error processing PR: {str(e)}', 'error')
+            logger.error(f"Template rendering error: {str(e)}", exc_info=True)
+            flash('Error displaying results', 'error')
             return redirect(url_for('index'))
+            
+        except Exception as e:
+            logger.error(f"Unexpected error in review route: {str(e)}")
+            flash('An unexpected error occurred', 'error')
+            return redirect(url_for('index'))
+
+    @app.route('/typescript-analysis', methods=['GET', 'POST'])
+    def typescript_analysis():
+        if request.method == 'GET':
+            return render_template('typescript_report_new.html', analysis_data={})
+        
+        try:
+            data = request.get_json()
+            pr_url = data.get('pr_url')
+            
+            if not pr_url:
+                return jsonify({'error': 'PR URL is required'}), 400
+            
+            # Initialize the analyzer
+            from services.code_analysis.analyzers.typescript_analyzer import TypeScriptAnalyzer
+            typescript_analyzer = TypeScriptAnalyzer()
+            
+            # Get PR files and analyze them
+            files = typescript_analyzer.get_pr_files(pr_url)
+            analysis_results = []
+            
+            for file_info in files:
+                if file_info['filename'].endswith('.ts') or file_info['filename'].endswith('.tsx'):
+                    content = file_info.get('content', '')
+                    analysis = typescript_analyzer.analyze_file(content, file_info['filename'])
+                    analysis_results.append(analysis.to_dict())
+            
+            # Combine results from multiple files
+            combined_analysis = typescript_analyzer.combine_analyses(analysis_results)
+            
+            # Return the analysis results based on request type
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify(combined_analysis)
+            
+            return render_template('typescript_report_new.html', analysis_data=combined_analysis)
+            
+        except Exception as e:
+            logger.error(f"Error in typescript analysis: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/test-typescript', methods=['GET'])
+    def test_typescript():
+        """Test route for TypeScript analysis"""
+        try:
+            # Initialize the analyzer
+            from services.code_analysis.analyzers.typescript_analyzer import TypeScriptAnalyzer
+            typescript_analyzer = TypeScriptAnalyzer()
+            
+            # Read the test file
+            with open('test_analysis.ts', 'r') as f:
+                content = f.read()
+            
+            # Analyze the file
+            analysis = typescript_analyzer.analyze_file(content, 'test_analysis.ts')
+            
+            # Convert to dict for template
+            analysis_data = {
+                'type_analysis': analysis.type_analysis.to_dict(),
+                'doc_analysis': analysis.doc_analysis.to_dict(),
+                'framework_analysis': analysis.framework_analysis.to_dict(),
+                'quality_score': analysis.quality_score,
+                'quality_gates': [gate.to_dict() for gate in analysis.quality_gates]
+            }
+            
+            # Return the analysis results
+            return render_template('typescript_report_new.html', analysis_data=analysis_data)
+            
+        except Exception as e:
+            logger.error(f"Error in test typescript analysis: {str(e)}")
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/save-review', methods=['POST', 'OPTIONS'])
     def save_review():
@@ -334,5 +487,6 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Using default Flask port 5000
-    app.run(host="0.0.0.0", port=port, debug=True)
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host=host, port=port, debug=True)

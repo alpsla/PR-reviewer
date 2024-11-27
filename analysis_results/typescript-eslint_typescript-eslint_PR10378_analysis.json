@@ -1,0 +1,91 @@
+{
+  "pr_info": {
+    "number": 10378,
+    "title": "fix: [no-unnecessary-condition] use assignability APIs in no-unnecessary-condition (POC)",
+    "url": "https://github.com/typescript-eslint/typescript-eslint/pull/10378",
+    "changed_files": 4
+  },
+  "analysis_results": [
+    {
+      "filename": "packages/eslint-plugin/src/rules/no-unnecessary-condition.ts",
+      "analysis": {
+        "type_analysis": {
+          "metrics": {
+            "type_coverage": 2.3,
+            "explicit_types": 138,
+            "generic_types": 6,
+            "interfaces": 0,
+            "mapped_types": 0,
+            "utility_types": 0,
+            "type_guards": 29,
+            "any_types": 6
+          },
+          "suggestions": [
+            "Increase type coverage (currently 2.3%)",
+            "Replace 6 'any' types with specific types",
+            "Consider using TypeScript utility types for better type manipulation"
+          ]
+        },
+        "documentation_analysis": {
+          "metrics": {
+            "coverage": 2.87,
+            "jsdoc_coverage": 5.75,
+            "tsdoc_coverage": 0.0,
+            "param_docs": 0,
+            "return_docs": 0,
+            "example_docs": 0,
+            "quality_score": 1.15
+          },
+          "suggestions": [
+            "Improve documentation coverage (currently 2.9%)",
+            "Add parameter documentation using @param tags",
+            "Add return value documentation using @returns tags",
+            "Add usage examples using @example tags"
+          ]
+        },
+        "framework_analysis": null,
+        "overall_quality_score": 19.03448275862069
+      }
+    },
+    {
+      "filename": "packages/eslint-plugin/tests/rules/no-unnecessary-condition.test.ts",
+      "analysis": {
+        "type_analysis": {
+          "metrics": {
+            "type_coverage": 23.95,
+            "explicit_types": 479,
+            "generic_types": 39,
+            "interfaces": 14,
+            "mapped_types": 25,
+            "utility_types": 4,
+            "type_guards": 15,
+            "any_types": 5
+          },
+          "suggestions": [
+            "Increase type coverage (currently 24.0%)",
+            "Replace 5 'any' types with specific types"
+          ]
+        },
+        "documentation_analysis": {
+          "metrics": {
+            "coverage": 0.0,
+            "jsdoc_coverage": 0.0,
+            "tsdoc_coverage": 0.0,
+            "param_docs": 0,
+            "return_docs": 0,
+            "example_docs": 0,
+            "quality_score": 0.0
+          },
+          "suggestions": [
+            "Improve documentation coverage (currently 0.0%)",
+            "Add parameter documentation using @param tags",
+            "Add return value documentation using @returns tags",
+            "Add usage examples using @example tags"
+          ]
+        },
+        "framework_analysis": null,
+        "overall_quality_score": 27.186046511627907
+      }
+    }
+  ]
+}

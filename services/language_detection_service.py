@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 import requests
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 # Configure logging
 logging.basicConfig(
@@ -33,6 +34,7 @@ class FileContent(TypedDict, total=False):
     content: str   # Required
     size: int     # Optional, will be calculated if not provided
     type: str     # Optional, detected from extension
+
 class LanguageTools:
     """Common language detection tools and utilities"""
     
@@ -333,6 +335,113 @@ class LanguageDetectionService:
         except Exception as e:
             logger.error(f"Language detection error: {str(e)}")
             raise RuntimeError(f"Language detection failed: {str(e)}")
+
+    def detectFromContentSync(self, files: List[Dict[str, Any]]) -> RepositoryLanguages:
+        """Synchronous version of detectFromContent."""
+        try:
+            # Convert files to expected format
+            file_contents = []
+            for file_info in files:
+                file_contents.append({
+                    'filename': file_info.get('filename', ''),
+                    'content': file_info.get('patch', ''),
+                    'size': len(file_info.get('patch', '').encode('utf-8'))
+                })
+            
+            logger.info(f"Language Determination: Starting content-based analysis for {len(files)} files")
+            language_stats: Dict[str, Dict] = {}
+            total_bytes = 0
+            skipped_files = []
+            
+            for file in file_contents:
+                try:
+                    filename = file['filename']
+                    logger.info(f"Language Determination: Processing file: {filename}")
+                    
+                    # Skip non-code files
+                    if LanguageTools.should_skip_file(filename):
+                        skipped_files.append(filename)
+                        logger.info(f"Language Determination: Skipping non-code file: {filename}")
+                        continue
+                    
+                    # Get file extension
+                    extension = filename.split('.')[-1] if '.' in filename else ''
+                    if not extension:
+                        logger.info(f"Language Determination: Skipping file without extension: {filename}")
+                        skipped_files.append(filename)
+                        continue
+                    
+                    # Get language info from extension
+                    language_info = LanguageTools.get_language_from_extension(extension)
+                    if not language_info:
+                        logger.info(f"Language Determination: Unknown extension: {extension}")
+                        continue
+                    
+                    language = language_info['name']
+                    if language not in language_stats:
+                        language_stats[language] = {
+                            'bytes': 0,
+                            'files': 0,
+                            'type': language_info['type']
+                        }
+                    
+                    language_stats[language]['bytes'] += file['size']
+                    language_stats[language]['files'] += 1
+                    total_bytes += file['size']
+                    
+                except Exception as e:
+                    logger.error(f"Language Determination: Error processing file {filename}: {str(e)}")
+                    continue
+            
+            # Create detection result
+            if not language_stats:
+                logger.warning("Language Determination: No languages detected")
+                return {
+                    'primary': {'name': 'Unknown', 'confidence': 0.0, 'bytes': 0, 'type': 'unknown'},
+                    'secondary': [],
+                    'total_bytes': 0,
+                    'detection_source': 'content'
+                }
+            
+            # Sort languages by bytes
+            sorted_languages = sorted(
+                language_stats.items(),
+                key=lambda x: (x[1]['bytes'], x[1]['files']),
+                reverse=True
+            )
+            
+            # Create result
+            primary_lang = sorted_languages[0]
+            self.current_detection = {
+                'primary': {
+                    'name': primary_lang[0],
+                    'confidence': 0.9,
+                    'bytes': primary_lang[1]['bytes'],
+                    'type': primary_lang[1]['type']
+                },
+                'secondary': [
+                    {
+                        'name': lang[0],
+                        'confidence': 0.8,
+                        'bytes': stats['bytes'],
+                        'type': stats['type']
+                    }
+                    for lang, stats in sorted_languages[1:]
+                ],
+                'total_bytes': total_bytes,
+                'detection_source': 'content'
+            }
+            
+            return self.current_detection
+            
+        except Exception as e:
+            logger.error(f"Language detection error: {str(e)}")
+            return {
+                'primary': {'name': 'Unknown', 'confidence': 0.0, 'bytes': 0, 'type': 'unknown'},
+                'secondary': [],
+                'total_bytes': 0,
+                'detection_source': 'error'
+            }
 
     def validateDetection(self, detection: RepositoryLanguages) -> bool:
         """Validate language detection results"""

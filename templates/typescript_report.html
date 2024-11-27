@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypeScript Analysis Report</title>
+</head>
+<body class="bg-slate-900 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">TypeScript Analysis Report</h1>
+        
+        <!-- React application mount point -->
+        <div id="typescript-report"></div>
+    </div>
+
+    <script>
+        // Populate analysis data for React
+        window.analysisData = {{ analysis_data | tojson | safe }};
+    </script>
+    
+    <!-- Include the bundled React application -->
+    <script src="{{ url_for('static', filename='dist/bundle.js') }}"></script>
+</body>
+</html>

@@ -2,6 +2,7 @@ from github import Github
 from github.GithubException import GithubException
 from typing import Dict, List, Optional
 import logging
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -21,7 +22,7 @@ class GitHubService:
             
         try:
             self.github = Github(token)
-            self.token_valid = False  # Will be set to True after successful validation
+            self.token_valid = True  # Set to True initially, will be set to False if validation fails
             # Perform basic validation without requiring write access
             self._basic_validation()
         except Exception as e:
@@ -96,155 +97,181 @@ class GitHubService:
             return f"Token lacks required scopes: {error_message}"
         return "Token lacks required permissions"
 
-    def fetch_pr_data(self, pr_details: Dict) -> Dict:
-        """Fetches PR data using GitHub API with enhanced error handling"""
-        if not self.github or not self.token_valid:
-            raise ValueError("GitHub token not configured or invalid")
-            
+    def fetch_pr_data(self, pr_details: Dict[str, str]) -> Optional[Dict]:
+        """Fetch pull request data from GitHub."""
         try:
-            repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
-            pr = repo.get_pull(pr_details['number'])
+            repo_name = f"{pr_details['owner']}/{pr_details['repo']}"
+            repo = self.github.get_repo(repo_name)
+            pr_number = int(pr_details['number'])
+            pr = repo.get_pull(pr_number)
             
-            return {
+            # Convert PR object to dict
+            pr_data = {
                 'title': pr.title,
                 'body': pr.body,
                 'state': pr.state,
-                'commits': pr.commits,
-                'changed_files': pr.changed_files,
-                'additions': pr.additions,
-                'deletions': pr.deletions
+                'created_at': pr.created_at.isoformat(),
+                'updated_at': pr.updated_at.isoformat(),
+                'user': {
+                    'login': pr.user.login,
+                    'avatar_url': pr.user.avatar_url
+                },
+                'base': {
+                    'repo': {
+                        'full_name': repo_name
+                    }
+                },
+                'head': {
+                    'ref': pr.head.ref,
+                    'sha': pr.head.sha
+                }
             }
-        except GithubException as e:
-            if e.status == 404:
-                raise ValueError("Pull request not found. Please verify the PR URL is correct")
-            elif e.status == 403:
-                raise ValueError("Access denied. Please check repository permissions and ensure token has required access")
-            else:
-                raise ValueError(f"Failed to fetch PR data: {str(e)}")
-    
-    async def fetch_pr_files(self, pr_details: Dict) -> List[Dict]:
-        """Fetches files changed in the PR with enhanced error handling"""
-        if not self.github or not self.token_valid:
-            raise ValueError("GitHub token not configured or invalid")
             
+            return pr_data
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch PR data: {str(e)}")
+            return None
+            
+    def fetch_pr_files_sync(self, pr_details: Dict[str, str]) -> Optional[List[Dict]]:
+        """Fetch files from a pull request."""
         try:
-            repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
-            pr = repo.get_pull(pr_details['number'])
+            repo_name = f"{pr_details['owner']}/{pr_details['repo']}"
+            repo = self.github.get_repo(repo_name)
+            pr_number = int(pr_details['number'])
+            pr = repo.get_pull(pr_number)
             
-            files_data = []
-            for f in pr.get_files():
-                files_data.append({
-                    'filename': f.filename,
-                    'status': f.status,
-                    'additions': f.additions,
-                    'deletions': f.deletions,
-                    'changes': f.changes,
-                    'patch': f.patch if f.patch else ''
-                })
-            return files_data
-        except GithubException as e:
-            if e.status == 403:
-                raise ValueError("Access denied. Please check repository permissions for file access")
-            else:
-                raise ValueError(f"Failed to fetch PR files: {str(e)}")
-    
-    async def fetch_pr_comments(self, pr_details: Dict) -> List[Dict]:
-        """Fetches PR comments with enhanced error handling"""
-        if not self.github or not self.token_valid:
-            raise ValueError("GitHub token not configured or invalid")
+            files = []
+            for file in pr.get_files():
+                try:
+                    # Get file content from the PR's head commit
+                    content = None
+                    if file.status != 'removed':  # Only get content for non-removed files
+                        try:
+                            content = repo.get_contents(file.filename, ref=pr.head.sha)
+                            content = content.decoded_content.decode('utf-8') if content else None
+                            logger.debug(f"Successfully fetched content for {file.filename}")
+                        except Exception as e:
+                            logger.warning(f"Failed to get content for {file.filename}: {str(e)}")
+                            # If direct content fetch fails, try using raw_url
+                            if hasattr(file, 'raw_url') and file.raw_url:
+                                try:
+                                    import requests
+                                    response = requests.get(file.raw_url)
+                                    if response.status_code == 200:
+                                        content = response.text
+                                        logger.debug(f"Successfully fetched content from raw_url for {file.filename}")
+                                except Exception as e:
+                                    logger.warning(f"Failed to get content from raw_url for {file.filename}: {str(e)}")
+                    
+                    file_data = {
+                        'filename': file.filename,
+                        'status': file.status,
+                        'additions': file.additions,
+                        'deletions': file.deletions,
+                        'changes': file.changes,
+                        'patch': file.patch if hasattr(file, 'patch') else None,
+                        'raw_url': file.raw_url if hasattr(file, 'raw_url') else None,
+                        'contents_url': file.contents_url if hasattr(file, 'contents_url') else None,
+                        'content': content
+                    }
+                    files.append(file_data)
+                    logger.debug(f"Added file {file.filename} to analysis queue")
+                except Exception as e:
+                    logger.error(f"Error processing file {file.filename}: {str(e)}")
+                    continue
+                
+            logger.info(f"Successfully fetched {len(files)} files from PR")
+            return files
             
+        except Exception as e:
+            logger.error(f"Failed to fetch PR files: {str(e)}")
+            return None
+            
+    def fetch_pr_comments_sync(self, pr_details: Dict[str, str]) -> Optional[List[Dict]]:
+        """Fetch comments from a pull request."""
         try:
-            repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
-            pr = repo.get_pull(pr_details['number'])
+            repo_name = f"{pr_details['owner']}/{pr_details['repo']}"
+            repo = self.github.get_repo(repo_name)
+            pr_number = int(pr_details['number'])
+            pr = repo.get_pull(pr_number)
             
-            comments_data = []
+            comments = []
             for comment in pr.get_comments():
-                comments_data.append({
+                comment_data = {
+                    'id': comment.id,
                     'user': comment.user.login,
                     'body': comment.body,
-                    'created_at': comment.created_at
-                })
-            return comments_data
-        except GithubException as e:
-            if e.status == 403:
-                raise ValueError("Access denied. Please check permissions for viewing comments")
-            else:
-                raise ValueError(f"Failed to fetch PR comments: {str(e)}")
+                    'created_at': comment.created_at.isoformat(),
+                    'updated_at': comment.updated_at.isoformat(),
+                    'path': comment.path if hasattr(comment, 'path') else None,
+                    'position': comment.position if hasattr(comment, 'position') else None
+                }
+                comments.append(comment_data)
+                
+            return comments
             
-    def post_pr_comment(self, pr_details: Dict, comment_text: str) -> Dict:
-        """Posts a comment on the PR with enhanced error handling"""
-        if not self.github or not self.token_valid:
-            raise ValueError("GitHub token not configured or invalid")
-            
-        # Verify write access for specific repository
-        self._verify_write_access(pr_details['owner'], pr_details['repo'])
-        
+        except Exception as e:
+            logger.error(f"Failed to fetch PR comments: {str(e)}")
+            return None
+
+    def get_file_content(self, repo_name: str, file_path: str, ref: str) -> Optional[str]:
+        """Get file content from GitHub repository"""
         try:
-            repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
-            pr = repo.get_pull(pr_details['number'])
+            owner, repo = repo_name.split('/')
+            repo_obj = self.github.get_repo(repo_name)
+            content = repo_obj.get_contents(file_path, ref=ref)
+            return content.decoded_content.decode('utf-8')
+        except Exception as e:
+            logger.error(f"Failed to get file content: {str(e)}")
+            return None
+
+    def get_pr_info(self, pr_url: str) -> Optional[Dict]:
+        """Get PR information from GitHub."""
+        try:
+            pr_details = self._parse_pr_url(pr_url)
+            if not pr_details:
+                logger.error(f"Invalid PR URL format: {pr_url}")
+                return None
+                
+            # Get PR data
+            pr_data = self.fetch_pr_data(pr_details)
+            if not pr_data:
+                logger.error("Failed to fetch PR data")
+                return None
+                
+            # Get files
+            files = self.fetch_pr_files_sync(pr_details)
+            if not files:
+                logger.error("Failed to fetch PR files")
+                return None
+                
+            # Add files to PR data
+            pr_data['files'] = files
+            pr_data['changed_files'] = len(files)
             
-            comment = pr.create_issue_comment(comment_text)
+            return pr_data
             
+        except Exception as e:
+            logger.error(f"Error getting PR info: {str(e)}")
+            return None
+            
+    def _parse_pr_url(self, pr_url: str) -> Optional[Dict[str, str]]:
+        """Parse GitHub PR URL into components."""
+        try:
+            # Parse URL pattern: https://github.com/owner/repo/pull/number
+            pattern = r"https://github\.com/([^/]+)/([^/]+)/pull/(\d+)"
+            match = re.match(pattern, pr_url)
+            
+            if not match:
+                return None
+                
             return {
-                'id': str(comment.id),
-                'url': comment.html_url
+                'owner': match.group(1),
+                'repo': match.group(2),
+                'number': match.group(3)
             }
-        except GithubException as e:
-            if e.status == 403:
-                raise ValueError(
-                    f"Cannot post comment to {pr_details['owner']}/{pr_details['repo']}. "
-                    "Please ensure the token has proper write access for this repository."
-                )
-            elif e.status == 404:
-                raise ValueError("Repository or PR not found. Please verify the URL and permissions")
-            else:
-                raise ValueError(f"Failed to post PR comment: {str(e)}")
-
-    def fetch_pr_files_sync(self, pr_details: Dict) -> List[Dict]:
-        """Synchronous version of fetch_pr_files"""
-        if not self.github or not self.token_valid:
-            raise ValueError("GitHub token not configured or invalid")
             
-        try:
-            repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
-            pr = repo.get_pull(pr_details['number'])
-            
-            files_data = []
-            for f in pr.get_files():
-                files_data.append({
-                    'filename': f.filename,
-                    'status': f.status,
-                    'additions': f.additions,
-                    'deletions': f.deletions,
-                    'changes': f.changes,
-                    'patch': f.patch if f.patch else ''
-                })
-            return files_data
-        except GithubException as e:
-            if e.status == 403:
-                raise ValueError("Access denied. Please check repository permissions for file access")
-            else:
-                raise ValueError(f"Failed to fetch PR files: {str(e)}")
-
-    def fetch_pr_comments_sync(self, pr_details: Dict) -> List[Dict]:
-        """Synchronous version of fetch_pr_comments"""
-        if not self.github or not self.token_valid:
-            raise ValueError("GitHub token not configured or invalid")
-            
-        try:
-            repo = self.github.get_repo(f"{pr_details['owner']}/{pr_details['repo']}")
-            pr = repo.get_pull(pr_details['number'])
-            
-            comments_data = []
-            for comment in pr.get_comments():
-                comments_data.append({
-                    'user': comment.user.login,
-                    'body': comment.body,
-                    'created_at': comment.created_at
-                })
-            return comments_data
-        except GithubException as e:
-            if e.status == 403:
-                raise ValueError("Access denied. Please check permissions for viewing comments")
-            else:
-                raise ValueError(f"Failed to fetch PR comments: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error parsing PR URL: {str(e)}")
+            return None

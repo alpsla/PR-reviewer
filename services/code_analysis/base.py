@@ -35,6 +35,36 @@ class DocumentationMetrics:
     functions: Dict[str, Dict] = field(default_factory=dict)
     error: Optional[str] = None
 
+@dataclass
+class AnalysisResult:
+    """Result of code analysis"""
+    # Type system analysis
+    interfaces_found: int = 0
+    types_found: int = 0
+    type_aliases: int = 0
+    generic_types: int = 0
+    type_coverage: float = 0.0
+    interface_details: Dict[str, Dict] = field(default_factory=dict)
+    
+    # Documentation analysis
+    jsdoc_coverage: float = 0.0
+    type_doc_coverage: float = 0.0
+    interface_doc_coverage: float = 0.0
+    well_documented: List[str] = field(default_factory=list)
+    
+    # Pattern analysis
+    modern_features: Dict[str, bool] = field(default_factory=dict)
+    best_practices: Dict[str, bool] = field(default_factory=dict)
+    framework_patterns: Dict[str, Dict[str, bool]] = field(default_factory=dict)
+    
+    # Recommendations
+    type_improvements: List[str] = field(default_factory=list)
+    doc_improvements: List[str] = field(default_factory=list)
+    pattern_suggestions: List[str] = field(default_factory=list)
+    
+    # Error handling
+    error: Optional[str] = None
+
 class CodeAnalyzerBase:
     """Base class for code analyzers"""
     

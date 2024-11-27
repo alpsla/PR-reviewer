@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+.metric-card {
+  @apply transition-all duration-300 hover:shadow-lg;
+}
+
+.type-distribution-bar {
+  @apply transition-all duration-300;
+}
+
+.critical-issue {
+  @apply transition-all duration-300 hover:bg-slate-700/50;
+}

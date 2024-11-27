@@ -1,0 +1,302 @@
+[
+  {
+    "filename": "examples/cache-handler-redis/app/[timezone]/page.tsx",
+    "type_system": {
+      "interfaces_found": 0,
+      "types_found": 1,
+      "type_aliases": 1,
+      "generic_types": 17,
+      "type_coverage": 7.142857142857142,
+      "interface_details": {}
+    },
+    "documentation": {
+      "jsdoc_coverage": 0.0,
+      "type_doc_coverage": 0.0,
+      "interface_doc_coverage": 100,
+      "well_documented": [],
+      "needs_documentation": [
+        "TimeData"
+      ]
+    },
+    "patterns": {
+      "modern_features": {
+        "template_literal_types": false,
+        "optional_chaining": false,
+        "nullish_coalescing": false,
+        "type_guards": false
+      },
+      "best_practices": {
+        "proper_type_exports": true,
+        "consistent_interface_naming": false,
+        "type_guard_usage": false,
+        "any_types_found": false
+      },
+      "framework_patterns": {
+        "react": {
+          "event_typing": false,
+          "prop_types": false,
+          "hook_types": false,
+          "context_typing": false
+        },
+        "testing": {
+          "jest_types": false,
+          "async_typing": false
+        }
+      }
+    },
+    "recommendations": {
+      "type_improvements": [
+        "Add missing parameter types in callbacks",
+        "Consider using readonly arrays"
+      ],
+      "doc_improvements": [
+        "Add missing type documentation",
+        "Enhance method parameter docs",
+        "Include usage examples"
+      ],
+      "pattern_suggestions": [
+        "Consider using type predicates",
+        "Consider using const assertions",
+        "Add explicit return types"
+      ]
+    }
+  },
+  {
+    "filename": "examples/cache-handler-redis/app/cache-state-watcher.tsx",
+    "type_system": {
+      "interfaces_found": 0,
+      "types_found": 1,
+      "type_aliases": 1,
+      "generic_types": 5,
+      "type_coverage": 5.555555555555555,
+      "interface_details": {}
+    },
+    "documentation": {
+      "jsdoc_coverage": 0.0,
+      "type_doc_coverage": 0.0,
+      "interface_doc_coverage": 100,
+      "well_documented": [],
+      "needs_documentation": [
+        "CacheStateWatcherProps",
+        "CacheStateWatcher",
+        "check"
+      ]
+    },
+    "patterns": {
+      "modern_features": {
+        "template_literal_types": false,
+        "optional_chaining": false,
+        "nullish_coalescing": false,
+        "type_guards": false
+      },
+      "best_practices": {
+        "proper_type_exports": true,
+        "consistent_interface_naming": false,
+        "type_guard_usage": false,
+        "any_types_found": false
+      },
+      "framework_patterns": {
+        "react": {
+          "event_typing": false,
+          "prop_types": true,
+          "hook_types": false,
+          "context_typing": false
+        },
+        "testing": {
+          "jest_types": false,
+          "async_typing": false
+        }
+      }
+    },
+    "recommendations": {
+      "type_improvements": [
+        "Add missing parameter types in callbacks",
+        "Consider using readonly arrays"
+      ],
+      "doc_improvements": [
+        "Add missing type documentation",
+        "Enhance method parameter docs",
+        "Include usage examples"
+      ],
+      "pattern_suggestions": [
+        "Consider using type predicates",
+        "Consider using const assertions",
+        "Add explicit return types"
+      ]
+    }
+  },
+  {
+    "filename": "examples/cache-handler-redis/app/layout.tsx",
+    "type_system": {
+      "interfaces_found": 0,
+      "types_found": 0,
+      "type_aliases": 0,
+      "generic_types": 4,
+      "type_coverage": 50.0,
+      "interface_details": {}
+    },
+    "documentation": {
+      "jsdoc_coverage": 100,
+      "type_doc_coverage": 0.0,
+      "interface_doc_coverage": 100,
+      "well_documented": [],
+      "needs_documentation": []
+    },
+    "patterns": {
+      "modern_features": {
+        "template_literal_types": false,
+        "optional_chaining": false,
+        "nullish_coalescing": false,
+        "type_guards": false
+      },
+      "best_practices": {
+        "proper_type_exports": true,
+        "consistent_interface_naming": false,
+        "type_guard_usage": false,
+        "any_types_found": false
+      },
+      "framework_patterns": {
+        "react": {
+          "event_typing": true,
+          "prop_types": false,
+          "hook_types": false,
+          "context_typing": false
+        },
+        "testing": {
+          "jest_types": false,
+          "async_typing": false
+        }
+      }
+    },
+    "recommendations": {
+      "type_improvements": [
+        "Add missing parameter types in callbacks",
+        "Consider using readonly arrays"
+      ],
+      "doc_improvements": [
+        "Include usage examples"
+      ],
+      "pattern_suggestions": [
+        "Consider using type predicates",
+        "Consider using const assertions",
+        "Add explicit return types"
+      ]
+    }
+  },
+  {
+    "filename": "examples/cache-handler-redis/app/revalidate-from.tsx",
+    "type_system": {
+      "interfaces_found": 0,
+      "types_found": 0,
+      "type_aliases": 0,
+      "generic_types": 5,
+      "type_coverage": 0.0,
+      "interface_details": {}
+    },
+    "documentation": {
+      "jsdoc_coverage": 100,
+      "type_doc_coverage": 100,
+      "interface_doc_coverage": 100,
+      "well_documented": [],
+      "needs_documentation": []
+    },
+    "patterns": {
+      "modern_features": {
+        "template_literal_types": false,
+        "optional_chaining": false,
+        "nullish_coalescing": false,
+        "type_guards": false
+      },
+      "best_practices": {
+        "proper_type_exports": true,
+        "consistent_interface_naming": false,
+        "type_guard_usage": false,
+        "any_types_found": false
+      },
+      "framework_patterns": {
+        "react": {
+          "event_typing": false,
+          "prop_types": false,
+          "hook_types": false,
+          "context_typing": false
+        },
+        "testing": {
+          "jest_types": false,
+          "async_typing": false
+        }
+      }
+    },
+    "recommendations": {
+      "type_improvements": [
+        "Add missing parameter types in callbacks",
+        "Consider using readonly arrays"
+      ],
+      "doc_improvements": [
+        "Include usage examples"
+      ],
+      "pattern_suggestions": [
+        "Consider using type predicates",
+        "Consider using const assertions",
+        "Add explicit return types"
+      ]
+    }
+  },
+  {
+    "filename": "examples/cache-handler-redis/app/server-actions.ts",
+    "type_system": {
+      "interfaces_found": 0,
+      "types_found": 0,
+      "type_aliases": 0,
+      "generic_types": 0,
+      "type_coverage": 0.0,
+      "interface_details": {}
+    },
+    "documentation": {
+      "jsdoc_coverage": 100,
+      "type_doc_coverage": 100,
+      "interface_doc_coverage": 100,
+      "well_documented": [],
+      "needs_documentation": []
+    },
+    "patterns": {
+      "modern_features": {
+        "template_literal_types": false,
+        "optional_chaining": false,
+        "nullish_coalescing": false,
+        "type_guards": false
+      },
+      "best_practices": {
+        "proper_type_exports": true,
+        "consistent_interface_naming": false,
+        "type_guard_usage": false,
+        "any_types_found": false
+      },
+      "framework_patterns": {
+        "react": {
+          "event_typing": false,
+          "prop_types": false,
+          "hook_types": false,
+          "context_typing": false
+        },
+        "testing": {
+          "jest_types": false,
+          "async_typing": false
+        }
+      }
+    },
+    "recommendations": {
+      "type_improvements": [
+        "Add missing parameter types in callbacks",
+        "Consider using readonly arrays"
+      ],
+      "doc_improvements": [
+        "Include usage examples"
+      ],
+      "pattern_suggestions": [
+        "Consider using type predicates",
+        "Consider using const assertions",
+        "Add explicit return types"
+      ]
+    }
+  }
+]
